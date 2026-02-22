@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+out/
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+!.vscode/settings.json
+.idea/
+
+# Supabase local
+supabase/.temp/
+
+# Credentials (never commit)
+credentials.json
+
+# Debug
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test coverage
+coverage/

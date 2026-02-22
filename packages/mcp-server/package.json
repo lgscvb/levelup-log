@@ -1,0 +1,56 @@
+{
+  "name": "@levelup-log/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP Server that turns your daily tasks into game-like achievements",
+  "type": "module",
+  "bin": {
+    "levelup-log": "./dist/cli.js"
+  },
+  "main": "./dist/server.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsx watch src/cli.ts serve",
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/cli.ts serve",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "open": "^10.1.0",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "achievement",
+    "gamification",
+    "levelup",
+    "ai"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/levelup-log.git",
+    "directory": "packages/mcp-server"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
