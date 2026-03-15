@@ -47,7 +47,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/levelup-log.git",
+    "url": "https://github.com/lgscvb/levelup-log.git",
     "directory": "packages/mcp-server"
   },
   "engines": {
