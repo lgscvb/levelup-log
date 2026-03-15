@@ -10,23 +10,32 @@ import { log } from "./utils/logger.js";
 // Deterministic XP calculation so all agents produce consistent scores.
 //
 // Factors:
-//   complexity    — cognitive difficulty tier (base XP)
-//   time_minutes  — actual time invested (multiplier)
-//   output_units  — files changed / items created / tasks completed (additive bonus)
-//   input_units   — files read / resources consulted (lighter additive bonus)
+//   complexity          — cognitive difficulty tier (base XP)
+//   time_minutes        — actual time invested (multiplier)
+//   output_units        — category-aware tangible output count (additive bonus)
+//                         code/fix/refactor : files changed
+//                         docs/learn        : pages / concepts / chapters
+//                         health            : 30-min exercise blocks or km
+//                         life              : tasks completed (errands, chores)
+//                         social            : people helped / conversations
+//                         creative          : pieces produced
+//   input_units         — files read / resources consulted (lighter additive bonus)
 //   conversation_rounds — back-and-forth exchanges in the session (additive bonus)
+//   self_reported       — true when user narrates past event without AI collaboration;
+//                         applies 0.85 discount (not verified by AI, still valuable)
 //
 // Formula:
 //   base     = COMPLEXITY_BASE[complexity] × time_multiplier(time_minutes)
-//   bonuses  = output_bonus(output_units)
-//            + input_bonus(input_units)
-//            + rounds_bonus(conversation_rounds)
-//   xp       = clamp(round(base + bonuses), 5, 500)
+//   bonuses  = output_bonus(output_units)       [log-diminishing, cap 60]
+//            + input_bonus(input_units)          [linear, cap 15]
+//            + rounds_bonus(conversation_rounds) [linear, cap 25]
+//   raw_xp   = clamp(round(base + bonuses), 5, 500)
+//   xp       = self_reported ? round(raw_xp × 0.85) : raw_xp
 //
 // Design choices:
-//   • output weighted 3× input (producing > consuming)
-//   • all bonuses are capped to prevent abuse / runaway XP
-//   • log-diminishing returns on output keeps large PRs sane
+//   • output uses log-diminishing returns — avoids runaway XP for huge PRs
+//   • output weighted 4× input (producing > consuming)
+//   • self_reported 15% discount — fair without punishing honest logging
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Complexity = "trivial" | "normal" | "significant" | "major" | "milestone";
@@ -46,19 +55,20 @@ function timeMultiplier(minutes: number): number {
   return 1.6;
 }
 
-// Diminishing returns: 1→3, 5→10, 10→15, 20→21, cap 60
+// Log-diminishing returns: 1→12, 3→19, 5→24, 10→29, 20→34, cap 60
 function outputBonus(units: number): number {
+  if (units <= 0) return 0;
   return Math.min(Math.round(Math.log2(units + 1) * 12), 60);
 }
 
 // Lighter signal: each input unit = 1 XP, cap 15
 function inputBonus(units: number): number {
-  return Math.min(units, 15);
+  return Math.min(Math.max(units, 0), 15);
 }
 
 // Each round = 1 XP, cap 25
 function roundsBonus(rounds: number): number {
-  return Math.min(rounds, 25);
+  return Math.min(Math.max(rounds, 0), 25);
 }
 
 export function calculateXp(params: {
@@ -67,6 +77,7 @@ export function calculateXp(params: {
   output_units?: number;
   input_units?: number;
   conversation_rounds?: number;
+  self_reported?: boolean;
 }): number {
   const base =
     COMPLEXITY_BASE[params.complexity] *
@@ -77,7 +88,8 @@ export function calculateXp(params: {
     inputBonus(params.input_units ?? 0) +
     roundsBonus(params.conversation_rounds ?? 0);
 
-  return Math.min(500, Math.max(5, Math.round(base + bonuses)));
+  const raw = Math.min(500, Math.max(5, Math.round(base + bonuses)));
+  return params.self_reported ? Math.max(5, Math.round(raw * 0.85)) : raw;
 }
 
 export function createServer() {
@@ -91,29 +103,37 @@ export function createServer() {
     "record_achievement",
     {
       title: "Record Achievement",
-      description: `Proactively call this when the user completes meaningful work in this conversation — coding tasks, bug fixes, features, refactors, life tasks, learning, health, creative work, or any other productive activity.
+      description: `Proactively call this when the user completes meaningful work — coding, bug fixes, features, refactors, life tasks, learning, health, creative work, or any productive activity.
 
-WHEN TO CALL: Whenever the conversation involved real effort and produced a tangible output. Don't wait to be asked — if the user finished something, record it.
-DO NOT CALL for: simple questions answered, casual chat, trivial lookups with no output.
+WHEN TO CALL: Real effort + tangible output. Don't wait to be asked.
+DO NOT CALL: simple Q&A, casual chat, trivial lookups with no output.
 
-XP IS COMPUTED FROM THESE PARAMETERS — fill as many as you can observe:
-  complexity   — cognitive difficulty (required)
-  time_minutes — how long it took; ASK the user if unsure: "大概花了你多久？"
-  output_units — count of files changed / tasks completed / items created
-  input_units  — count of files read / resources consulted
-  conversation_rounds — number of message exchanges in this session
+SET self_reported=true when the user is narrating a past event (e.g. "I went for a run today") rather than completing work during this conversation. This applies a small XP discount since AI cannot verify — but the achievement still counts and is worth recording.
 
-XP formula (server computes, you do NOT guess):
-  base = complexity_base × time_mult
-  bonuses = output_bonus(log-diminishing, cap 60)
-          + input_bonus(cap 15)
-          + rounds_bonus(cap 25)
-  xp = clamp(base + bonuses, 5, 500)
+FILL AS MANY PARAMS AS YOU CAN OBSERVE:
+  complexity          — cognitive difficulty (required)
+  time_minutes        — how long; ASK if unsure: "大概花了你多久？"
+  output_units        — category-aware tangible output:
+    code/fix/refactor   → files changed (1 small fn=1, large file=5-10, 4 components=15)
+    docs/learn          → pages / chapters / concepts completed
+    health              → 30-min exercise blocks or km run
+    life                → tasks done (errand=1, outing with kids=2)
+    social              → people helped / conversations had
+    creative            → pieces produced (article=3, image=1)
+  input_units         — files read / docs consulted / searches done
+  conversation_rounds — message exchanges in this session
 
-Example: significant(75) × 1.3hr + 4 files(14) + 20 reads(15) + 25 rounds(25) = 152 XP
+XP formula (computed server-side, do NOT guess):
+  base     = complexity_base × time_mult
+  bonuses  = output_bonus(log-diminishing, cap 60)
+           + input_bonus(cap 15) + rounds_bonus(cap 25)
+  xp       = clamp(base + bonuses, 5, 500) × (self_reported ? 0.85 : 1.0)
+
+Example (AI-assisted): significant×1.3hr + 4 files + 20 reads + 25 rounds = 152 XP
+Example (self-report):  normal×1.0hr + 2 tasks(life) → ~38 XP × 0.85 = 32 XP
 
 Categories: ${ACHIEVEMENT_CATEGORIES.join(", ")}.
-Keep descriptions abstract — no real company names, client names, or source code.`,
+Keep descriptions abstract — no real names, client names, or source code.`,
       inputSchema: {
         category: z.enum(ACHIEVEMENT_CATEGORIES),
         title: z
@@ -157,6 +177,13 @@ Keep descriptions abstract — no real company names, client names, or source co
           .describe(
             "Number of message exchanges (user + assistant turns) in this conversation session.",
           ),
+        self_reported: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "True when the user is narrating a past event without AI collaboration (e.g. 'I exercised this morning'). Applies 15% XP discount since AI cannot verify, but the achievement still counts.",
+          ),
         tags: z
           .array(z.string())
           .optional()
@@ -177,6 +204,7 @@ Keep descriptions abstract — no real company names, client names, or source co
       output_units,
       input_units,
       conversation_rounds,
+      self_reported,
       tags,
       is_public,
     }) => {
@@ -186,6 +214,7 @@ Keep descriptions abstract — no real company names, client names, or source co
         output_units,
         input_units,
         conversation_rounds,
+        self_reported,
       });
       // Local rate limit check
       const rateCheck = checkRateLimit(category);
@@ -208,6 +237,7 @@ Keep descriptions abstract — no real company names, client names, or source co
         output_units,
         input_units,
         conversation_rounds,
+        self_reported,
         tags,
         is_public,
         source_platform: "claude-code",
