@@ -20,10 +20,15 @@ export function createServer() {
 
 WHEN TO CALL: Whenever the conversation involved real effort and produced a tangible output. Don't wait to be asked — if the user finished something, record it.
 DO NOT CALL for: simple questions answered, casual chat, trivial lookups with no output.
-Threshold: if it took genuine effort OR produced something real (code, a decision, completing a task), record it.
+
+XP IS CALCULATED FROM complexity + time_minutes — do NOT guess xp yourself:
+  complexity base: trivial=10, normal=30, significant=75, major=150, milestone=300
+  time multiplier: <15min→×0.7, 15-60min→×1.0, 1-3hr→×1.3, 3hr+→×1.6
+  Example: significant task (75) × 1.3 (1-2hr) = ~98 XP
+
+IF UNSURE about time spent, ASK the user before calling: "大概花了你多久？" — this ensures fair XP across different agents and sessions.
 
 Categories: ${ACHIEVEMENT_CATEGORIES.join(", ")}.
-XP range: 5-500 (5-15=trivial, 20-50=normal work, 50-100=significant, 100-200=major, 200-500=exceptional/milestone).
 Keep descriptions abstract — no real company names, client names, or source code.`,
       inputSchema: {
         category: z.enum(ACHIEVEMENT_CATEGORIES),
@@ -35,7 +40,18 @@ Keep descriptions abstract — no real company names, client names, or source co
         description: z
           .string()
           .describe("What was accomplished, in abstract terms (no PII)"),
-        xp: z.number().min(5).max(500).describe("Experience points (5-500)"),
+        complexity: z
+          .enum(["trivial", "normal", "significant", "major", "milestone"])
+          .describe(
+            "Task complexity: trivial=quick lookup, normal=typical task, significant=multi-step work, major=large feature, milestone=exceptional achievement",
+          ),
+        time_minutes: z
+          .number()
+          .min(1)
+          .optional()
+          .describe(
+            "Estimated minutes spent. If unknown, ask the user before recording.",
+          ),
         tags: z
           .array(z.string())
           .optional()
@@ -47,7 +63,30 @@ Keep descriptions abstract — no real company names, client names, or source co
           .describe("Whether this appears on public feed"),
       },
     },
-    async ({ category, title, description, xp, tags, is_public }) => {
+    async ({
+      category,
+      title,
+      description,
+      complexity,
+      time_minutes,
+      tags,
+      is_public,
+    }) => {
+      // Calculate XP from complexity + time (consistent across agents)
+      const baseXp: Record<string, number> = {
+        trivial: 10,
+        normal: 30,
+        significant: 75,
+        major: 150,
+        milestone: 300,
+      };
+      const minutes = time_minutes ?? 30; // default 30 min if not provided
+      const timeMult =
+        minutes < 15 ? 0.7 : minutes < 60 ? 1.0 : minutes < 180 ? 1.3 : 1.6;
+      const xp = Math.min(
+        500,
+        Math.max(5, Math.round(baseXp[complexity] * timeMult)),
+      );
       // Local rate limit check
       const rateCheck = checkRateLimit(category);
       if (!rateCheck.allowed) {
@@ -64,6 +103,8 @@ Keep descriptions abstract — no real company names, client names, or source co
         title,
         description,
         xp,
+        complexity,
+        time_minutes,
         tags,
         is_public,
         source_platform: "claude-code",
