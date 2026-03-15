@@ -1,10 +1,10 @@
 'use client';
 
-import { useLocale } from '@/components/language-toggle';
+import { useLocale } from '@/components/locale-provider';
 import { t } from '@/lib/i18n';
 
 export default function HomePage() {
-  const [locale] = useLocale();
+  const { locale } = useLocale();
   const tr = t(locale);
 
   return (
