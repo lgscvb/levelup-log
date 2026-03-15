@@ -1,4 +1,5 @@
-import Link from 'next/link';
+import Link from "next/link";
+import { LanguageToggle } from "./language-toggle";
 
 export function Nav() {
   return (
@@ -20,6 +21,7 @@ export function Nav() {
           >
             Dashboard
           </Link>
+          <LanguageToggle />
         </div>
       </div>
     </nav>
