@@ -10,12 +10,30 @@ INSERT INTO title_definitions (name, description, requirement_type, requirement_
   ('Master', 'Few reach this level of dedication.', 'total_xp', '{"min_xp": 50000}', 'epic', NULL),
   ('Grandmaster', 'A legend among legends.', 'total_xp', '{"min_xp": 200000}', 'legendary', NULL);
 
--- Category Specialty Titles
+-- Category Specialty Titles (17 categories × 1 title each)
 INSERT INTO title_definitions (name, description, requirement_type, requirement_value, rarity, icon) VALUES
-  ('Bug Slayer', 'Vanquished 50 bugs. They fear you.', 'category_count', '{"category": "fix", "count": 50}', 'rare', NULL),
-  ('Test Knight', 'Guardian of quality with 100 test achievements.', 'category_count', '{"category": "test", "count": 100}', 'rare', NULL),
-  ('Doc Wizard', 'The one who actually writes documentation.', 'category_count', '{"category": "docs", "count": 30}', 'uncommon', NULL),
-  ('Life Juggler', 'Balanced 100 life tasks while keeping everything together.', 'category_count', '{"category": "life", "count": 100}', 'rare', NULL);
+  -- Technical
+  ('Code Artisan',    '在 code 類別完成 100 項成就。從打字員進化為匠人。',         'category_count', '{"category": "code",     "count": 100}', 'rare',      '💻'),
+  ('Bug Slayer',      '消滅 50 個 bug。牠們見你就逃。',                           'category_count', '{"category": "fix",      "count": 50}',  'rare',      '🪲'),
+  ('Shipmaster',      '完成 20 次部署。每次都是一場賭注，你每次都贏了。',           'category_count', '{"category": "deploy",   "count": 20}',  'epic',      '🚀'),
+  ('Test Knight',     '品質的守護者，完成 100 項測試成就。',                       'category_count', '{"category": "test",     "count": 100}', 'rare',      '🧪'),
+  ('Doc Wizard',      '那個真的會寫文件的人。完成 30 項文件成就。',                 'category_count', '{"category": "docs",     "count": 30}',  'uncommon',  '📝'),
+  ('Clean Coder',     '重構 50 次。讓程式碼比你找到它時更乾淨。',                   'category_count', '{"category": "refactor", "count": 50}',  'uncommon',  '🔧'),
+  ('Code Whisperer',  '完成 30 次 code review。你的眼睛是團隊的防線。',           'category_count', '{"category": "review",   "count": 30}',  'uncommon',  '👁'),
+  ('Ops Wizard',      '完成 30 項維運任務。系統不當機是因為有你。',                 'category_count', '{"category": "ops",      "count": 30}',  'rare',      '⚙️'),
+  -- Knowledge
+  ('Lifelong Learner','完成 200 項學習成就。知識是你唯一不會折舊的資產。',           'category_count', '{"category": "learn",    "count": 200}', 'epic',      '📚'),
+  -- Milestones
+  ('Legend Maker',    '達成 10 個里程碑。你不只做事，你創造歷史。',                  'category_count', '{"category": "milestone","count": 10}',  'legendary', '🏆'),
+  -- Life
+  ('Life Juggler',    '在生活類別完成 100 件事。把日常瑣事變成成就本身。',          'category_count', '{"category": "life",     "count": 100}', 'rare',      '🏠'),
+  ('Iron Body',       '完成 150 項健康成就。你的身體是最重要的基礎設施。',           'category_count', '{"category": "health",   "count": 150}', 'epic',      '💪'),
+  ('Money Monk',      '完成 50 項財務成就。金錢是工具，你掌握了它。',               'category_count', '{"category": "finance",  "count": 50}',  'uncommon',  '💰'),
+  ('Connector',       '完成 80 項社交成就。你讓周圍的人變得更好。',                 'category_count', '{"category": "social",   "count": 80}',  'uncommon',  '🤝'),
+  ('Creator',         '完成 50 項創作成就。你把腦中的東西帶到了世界上。',           'category_count', '{"category": "creative", "count": 50}',  'rare',      '🎨'),
+  -- New categories
+  ('Inner Sage',      '完成 30 項身心靈成就。你在探索別人忽略的那個維度。',          'category_count', '{"category": "spiritual","count": 30}',  'uncommon',  '🔮'),
+  ('Enthusiast',      '完成 100 項興趣娛樂成就。認真玩也是一種才能。',              'category_count', '{"category": "hobby",    "count": 100}', 'uncommon',  '🎮');
 
 -- Streak Titles
 INSERT INTO title_definitions (name, description, requirement_type, requirement_value, rarity, icon) VALUES

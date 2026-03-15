@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { ACHIEVEMENT_CATEGORIES } from "./utils/config.js";
+import {
+  ACHIEVEMENT_CATEGORIES,
+  CATEGORY_DEFINITIONS,
+} from "./utils/config.js";
 import { checkRateLimit, recordRateEntry } from "./utils/rate-limiter.js";
 import { apiGet, apiPost } from "./utils/api.js";
 import { log } from "./utils/logger.js";
@@ -8,34 +11,19 @@ import { log } from "./utils/logger.js";
 // ─── XP Formula ──────────────────────────────────────────────────────────────
 //
 // Deterministic XP calculation so all agents produce consistent scores.
-//
-// Factors:
-//   complexity          — cognitive difficulty tier (base XP)
-//   time_minutes        — actual time invested (multiplier)
-//   output_units        — category-aware tangible output count (additive bonus)
-//                         code/fix/refactor : files changed
-//                         docs/learn        : pages / concepts / chapters
-//                         health            : 30-min exercise blocks or km
-//                         life              : tasks completed (errands, chores)
-//                         social            : people helped / conversations
-//                         creative          : pieces produced
-//   input_units         — files read / resources consulted (lighter additive bonus)
-//   conversation_rounds — back-and-forth exchanges in the session (additive bonus)
-//   self_reported       — true when user narrates past event without AI collaboration;
-//                         applies 0.85 discount (not verified by AI, still valuable)
+// Category definitions (CATEGORY_DEFINITIONS) are the source of truth:
+//   each category defines its output_unit semantics and xp_weight.
 //
 // Formula:
 //   base     = COMPLEXITY_BASE[complexity] × time_multiplier(time_minutes)
 //   bonuses  = output_bonus(output_units)       [log-diminishing, cap 60]
 //            + input_bonus(input_units)          [linear, cap 15]
 //            + rounds_bonus(conversation_rounds) [linear, cap 25]
-//   raw_xp   = clamp(round(base + bonuses), 5, 500)
+//   raw_xp   = clamp(round((base + bonuses) × category.xp_weight), 5, 500)
 //   xp       = self_reported ? round(raw_xp × 0.85) : raw_xp
 //
-// Design choices:
-//   • output uses log-diminishing returns — avoids runaway XP for huge PRs
-//   • output weighted 4× input (producing > consuming)
-//   • self_reported 15% discount — fair without punishing honest logging
+// xp_weight examples: deploy=1.3 (high-stakes), hobby=0.8 (leisure)
+// self_reported 15% discount: user narrates past event, AI cannot verify.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Complexity = "trivial" | "normal" | "significant" | "major" | "milestone";
@@ -72,6 +60,7 @@ function roundsBonus(rounds: number): number {
 }
 
 export function calculateXp(params: {
+  category: keyof typeof CATEGORY_DEFINITIONS;
   complexity: Complexity;
   time_minutes?: number;
   output_units?: number;
@@ -79,6 +68,8 @@ export function calculateXp(params: {
   conversation_rounds?: number;
   self_reported?: boolean;
 }): number {
+  const catWeight = CATEGORY_DEFINITIONS[params.category]?.xp_weight ?? 1.0;
+
   const base =
     COMPLEXITY_BASE[params.complexity] *
     timeMultiplier(params.time_minutes ?? 30);
@@ -88,8 +79,18 @@ export function calculateXp(params: {
     inputBonus(params.input_units ?? 0) +
     roundsBonus(params.conversation_rounds ?? 0);
 
-  const raw = Math.min(500, Math.max(5, Math.round(base + bonuses)));
+  const raw = Math.min(
+    500,
+    Math.max(5, Math.round((base + bonuses) * catWeight)),
+  );
   return params.self_reported ? Math.max(5, Math.round(raw * 0.85)) : raw;
+}
+
+// Generate output_units guidance from CATEGORY_DEFINITIONS for tool description
+function buildOutputUnitGuide(): string {
+  return Object.entries(CATEGORY_DEFINITIONS)
+    .map(([key, def]) => `    ${key.padEnd(12)} → ${def.output_unit}`)
+    .join("\n");
 }
 
 export function createServer() {
@@ -103,38 +104,26 @@ export function createServer() {
     "record_achievement",
     {
       title: "Record Achievement",
-      description: `Proactively call this when the user completes meaningful work — coding, bug fixes, features, refactors, life tasks, learning, health, creative work, or any productive activity.
+      description: `Proactively call this when the user completes meaningful work — coding, bug fixes, features, life tasks, learning, health, creative work, or any productive activity.
 
 WHEN TO CALL: Real effort + tangible output. Don't wait to be asked.
 DO NOT CALL: simple Q&A, casual chat, trivial lookups with no output.
 
-SET self_reported=true when the user is narrating a past event (e.g. "I went for a run today") rather than completing work during this conversation. This applies a small XP discount since AI cannot verify — but the achievement still counts and is worth recording.
+SET self_reported=true when user narrates a past event (e.g. "I went for a run today") vs. completing work during this conversation. Applies 15% XP discount — still worth recording.
 
 FILL AS MANY PARAMS AS YOU CAN OBSERVE:
   complexity          — cognitive difficulty (required)
-  time_minutes        — how long; ASK if unsure: "大概花了你多久？"
-  output_units        — category-aware tangible output:
-    code/fix/refactor   → files changed (1 small fn=1, large file=5-10, 4 components=15)
-    docs/learn          → pages / chapters / concepts completed
-    health              → 30-min exercise blocks or km run
-    life                → tasks done (errand=1, outing with kids=2)
-    social              → people helped / conversations had
-    creative            → pieces produced (article=3, image=1)
-    spiritual           → sessions completed (1 meditation=1, reading+reflection=2)
-    hobby               → sessions or items (1 game session=1, piece collected=1)
-  input_units         — files read / docs consulted / searches done
+  time_minutes        — how long; ASK the user if unsure: "大概花了你多久？"
+  output_units        — tangible outputs (meaning varies by category):
+${buildOutputUnitGuide()}
+  input_units         — resources consumed (files read, docs consulted, searches)
   conversation_rounds — message exchanges in this session
 
-XP formula (computed server-side, do NOT guess):
-  base     = complexity_base × time_mult
-  bonuses  = output_bonus(log-diminishing, cap 60)
-           + input_bonus(cap 15) + rounds_bonus(cap 25)
-  xp       = clamp(base + bonuses, 5, 500) × (self_reported ? 0.85 : 1.0)
+XP formula (server computes from category.xp_weight × complexity × time + bonuses):
+  Each category has its own xp_weight (deploy=1.3, milestone=1.5, hobby=0.8, etc.)
+  output_bonus: log-diminishing cap 60 | input_bonus: cap 15 | rounds_bonus: cap 25
+  Final: clamp((base+bonuses)×xp_weight×(self_reported?0.85:1), 5, 500)
 
-Example (AI-assisted): significant×1.3hr + 4 files + 20 reads + 25 rounds = 152 XP
-Example (self-report):  normal×1.0hr + 2 tasks(life) → ~38 XP × 0.85 = 32 XP
-
-Categories: ${ACHIEVEMENT_CATEGORIES.join(", ")}.
 Keep descriptions abstract — no real names, client names, or source code.`,
       inputSchema: {
         category: z.enum(ACHIEVEMENT_CATEGORIES),
@@ -211,6 +200,7 @@ Keep descriptions abstract — no real names, client names, or source code.`,
       is_public,
     }) => {
       const xp = calculateXp({
+        category,
         complexity,
         time_minutes,
         output_units,
