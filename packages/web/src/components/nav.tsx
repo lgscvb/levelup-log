@@ -1,7 +1,14 @@
-import Link from "next/link";
-import { LanguageToggle } from "./language-toggle";
+'use client';
+
+import Link from 'next/link';
+import { LanguageToggle } from './language-toggle';
+import { useLocale } from './locale-provider';
+import { t } from '@/lib/i18n';
 
 export function Nav() {
+  const { locale } = useLocale();
+  const tr = t(locale).nav;
+
   return (
     <nav className="border-b border-gray-800 bg-gray-950/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
@@ -9,17 +16,11 @@ export function Nav() {
           LevelUp<span className="text-emerald-400">.log</span>
         </Link>
         <div className="flex items-center gap-6">
-          <Link
-            href="/leaderboard"
-            className="text-sm text-gray-400 transition hover:text-white"
-          >
-            Leaderboard
+          <Link href="/leaderboard" className="text-sm text-gray-400 transition hover:text-white">
+            {tr.leaderboard}
           </Link>
-          <Link
-            href="/dashboard"
-            className="text-sm text-gray-400 transition hover:text-white"
-          >
-            Dashboard
+          <Link href="/dashboard" className="text-sm text-gray-400 transition hover:text-white">
+            {tr.dashboard}
           </Link>
           <LanguageToggle />
         </div>
