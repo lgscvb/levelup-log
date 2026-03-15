@@ -1,19 +1,23 @@
-'use client';
+"use client";
 
-import { createBrowserClient } from '@supabase/ssr';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { createBrowserClient } from "@supabase/ssr";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useLocale } from "@/components/locale-provider";
+import { t } from "@/lib/i18n";
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { locale } = useLocale();
+  const tr = t(locale).settings;
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
   const [profile, setProfile] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -21,13 +25,13 @@ export default function SettingsPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
       const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
         .single();
       setProfile(data);
     }
@@ -36,29 +40,29 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    setMessage('');
+    setMessage("");
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user || !profile) return;
 
     const { error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update({
         display_name: profile.display_name,
         bio: profile.bio,
         birth_date: profile.birth_date,
         default_public: profile.default_public,
       })
-      .eq('id', user.id);
+      .eq("id", user.id);
 
     setSaving(false);
-    setMessage(error ? `Error: ${error.message}` : 'Settings saved!');
+    setMessage(error ? `Error: ${error.message}` : tr.saved);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    router.push("/");
   };
 
   if (!profile)
@@ -70,16 +74,16 @@ export default function SettingsPage() {
 
   return (
     <main className="mx-auto max-w-xl p-6">
-      <h1 className="mb-6 text-2xl font-bold">Settings</h1>
+      <h1 className="mb-6 text-2xl font-bold">{tr.title}</h1>
 
       <div className="space-y-4">
         <div>
           <label className="mb-1 block text-sm text-gray-400">
-            Display Name
+            {tr.displayName}
           </label>
           <input
             type="text"
-            value={profile.display_name || ''}
+            value={profile.display_name || ""}
             onChange={(e) =>
               setProfile({ ...profile, display_name: e.target.value })
             }
@@ -88,9 +92,9 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-gray-400">Bio</label>
+          <label className="mb-1 block text-sm text-gray-400">{tr.bio}</label>
           <textarea
-            value={profile.bio || ''}
+            value={profile.bio || ""}
             onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
             rows={3}
             className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
@@ -99,11 +103,11 @@ export default function SettingsPage() {
 
         <div>
           <label className="mb-1 block text-sm text-gray-400">
-            Birth Date (your level = your age)
+            {tr.birthDate}
           </label>
           <input
             type="date"
-            value={profile.birth_date || ''}
+            value={profile.birth_date || ""}
             onChange={(e) =>
               setProfile({ ...profile, birth_date: e.target.value })
             }
@@ -122,13 +126,13 @@ export default function SettingsPage() {
             className="h-4 w-4 accent-emerald-500"
           />
           <label htmlFor="default_public" className="text-sm text-gray-400">
-            Achievements public by default
+            {tr.publicDefault}
           </label>
         </div>
 
         {message && (
           <p
-            className={`text-sm ${message.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'}`}
+            className={`text-sm ${message.startsWith("Error") ? "text-red-400" : "text-emerald-400"}`}
           >
             {message}
           </p>
@@ -139,7 +143,7 @@ export default function SettingsPage() {
           disabled={saving}
           className="w-full rounded-lg bg-emerald-600 px-6 py-2.5 font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save Settings'}
+          {saving ? tr.saving : tr.save}
         </button>
       </div>
 
@@ -149,7 +153,7 @@ export default function SettingsPage() {
         onClick={handleLogout}
         className="w-full rounded-lg border border-red-800 px-6 py-2.5 text-red-400 transition hover:bg-red-950"
       >
-        Sign Out
+        {tr.signOut}
       </button>
     </main>
   );
