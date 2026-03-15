@@ -197,6 +197,34 @@ Tool 呼叫 → 檢查 keychain token → 過期？→ refresh token
 - **Next.js 15**：`params`、`searchParams`、`cookies()` 都是 async（需要 await）
 - **Tailwind CSS v4**：不需要 config 檔，直接 `@import "tailwindcss"` 即可
 
+## i18n 規範（前端必讀）
+
+**支援語言（7 種）**：en, zh-TW, zh-CN, ja, ko, es, pt-BR
+
+**翻譯檔位置**：`packages/web/src/lib/i18n.ts`
+
+**Locale 狀態**：透過 `LocaleProvider`（React Context）管理，儲存於 localStorage。
+
+### 新增或修改前端頁面時的 i18n 規則
+
+**禁止**在 JSX 中硬編碼 UI 文字，一律使用 `t(locale).*`。
+
+**Server Component 頁面（async function）**：
+- 不能直接使用 `useLocale()`（hooks 只能在 client component 用）
+- **做法**：建立對應的 `*Client.tsx`（加 `'use client'`），server component 抓資料後以 props 傳入 client component
+- 範例：`dashboard/page.tsx` → `dashboard/DashboardClient.tsx`
+
+**Client Component 頁面（已有 `'use client'`）**：
+- 直接在頂層加 `const { locale } = useLocale(); const tr = t(locale).xxx;`
+
+### 新增頁面時的 checklist
+
+1. 把頁面所有 UI 字串加入 `i18n.ts` 的 `Translations` 型別
+2. 為全部 7 個 locale 補齊翻譯（en 為基礎，其他語言確認語意正確）
+3. Server Component → 建 `*Client.tsx` wrapper；Client Component → 直接用 `useLocale()`
+4. 日期格式化用 `toLocaleDateString(locale, ...)` 而非硬編碼 `"en-US"`
+5. 數字格式化用 `toLocaleString(locale)` 而非 `toLocaleString()`
+
 ## 商業模式（MVP）
 
 MVP 期間全功能免費。Pro 付費架構已預留但暫不啟用：
