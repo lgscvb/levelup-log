@@ -1,10 +1,10 @@
 {
   "name": "@levelup-log/mcp-server",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MCP Server that turns your daily tasks into game-like achievements",
   "type": "module",
   "bin": {
-    "levelup-log": "./dist/cli.js"
+    "levelup-log": "dist/cli.js"
   },
   "main": "./dist/server.js",
   "files": [
@@ -48,7 +48,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lgscvb/levelup-log.git",
+    "url": "git+https://github.com/lgscvb/levelup-log.git",
     "directory": "packages/mcp-server"
   },
   "engines": {
