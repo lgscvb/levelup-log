@@ -120,6 +120,8 @@ FILL AS MANY PARAMS AS YOU CAN OBSERVE:
     life                → tasks done (errand=1, outing with kids=2)
     social              → people helped / conversations had
     creative            → pieces produced (article=3, image=1)
+    spiritual           → sessions completed (1 meditation=1, reading+reflection=2)
+    hobby               → sessions or items (1 game session=1, piece collected=1)
   input_units         — files read / docs consulted / searches done
   conversation_rounds — message exchanges in this session
 

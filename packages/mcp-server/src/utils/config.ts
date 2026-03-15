@@ -25,6 +25,8 @@ export const ACHIEVEMENT_CATEGORIES = [
   "finance",
   "social",
   "creative",
+  "spiritual", // 身心靈：冥想、占卜、祈禱、儀式、能量練習
+  "hobby", // 興趣娛樂：打電動、看電影、收藏、桌遊、園藝
 ] as const;
 
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
