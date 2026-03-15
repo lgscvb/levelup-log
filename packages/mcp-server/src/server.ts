@@ -249,12 +249,23 @@ Keep descriptions abstract — no real names, client names, or source code.`,
 
       const data = result.data as Record<string, unknown>;
       const stats = data.stats as Record<string, unknown> | undefined;
+      const newTitles = data.newly_unlocked as
+        | Array<{ name: string; rarity: string; icon?: string }>
+        | undefined;
 
       const lines = [
         `Achievement recorded! +${xp} XP`,
         stats ? `Total XP: ${stats.total_xp} | Year XP: ${stats.year_xp}` : "",
         stats?.age_level ? `Level: Lv.${stats.age_level}` : "",
         stats?.current_streak ? `Streak: ${stats.current_streak} days` : "",
+        ...(newTitles?.length
+          ? [
+              `\n🎉 Title${newTitles.length > 1 ? "s" : ""} unlocked!`,
+              ...newTitles.map(
+                (t) => `  ${t.icon ?? "🏅"} ${t.name} [${t.rarity}]`,
+              ),
+            ]
+          : []),
       ].filter(Boolean);
 
       return {

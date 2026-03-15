@@ -2,10 +2,12 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { getSupabaseClient, getAuthUser } from '../_shared/auth.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { sanitizeText } from '../_shared/sanitize.ts';
+import { checkAndUnlockTitles } from '../_shared/unlock-titles.ts';
 
 const VALID_CATEGORIES = [
   'code', 'fix', 'deploy', 'test', 'docs', 'refactor', 'review',
-  'learn', 'ops', 'milestone', 'life', 'health', 'finance', 'social', 'creative',
+  'learn', 'ops', 'milestone', 'life', 'health', 'finance', 'social',
+  'creative', 'spiritual', 'hobby',
 ];
 
 Deno.serve(async (req) => {
@@ -35,7 +37,13 @@ Deno.serve(async (req) => {
 
     // Parse body
     const body = await req.json();
-    const { category, title, description, xp, tags, is_public, metadata, source_platform } = body;
+    const {
+      category, title, description, xp, tags, is_public,
+      metadata, source_platform,
+      // XP formula params (stored in metadata for analytics)
+      complexity, time_minutes, output_units, input_units,
+      conversation_rounds, self_reported,
+    } = body;
 
     // Validate
     if (!category || !VALID_CATEGORIES.includes(category)) {
@@ -63,7 +71,7 @@ Deno.serve(async (req) => {
 
     const supabase = getSupabaseClient(authHeader);
 
-    // Insert achievement
+    // Insert achievement (store XP formula params in metadata for analytics)
     const { data: achievement, error: insertError } = await supabase
       .from('achievements')
       .insert({
@@ -73,7 +81,16 @@ Deno.serve(async (req) => {
         description: sanitizedDesc,
         xp,
         tags: tags || [],
-        metadata: metadata || {},
+        metadata: {
+          ...(metadata || {}),
+          // XP formula inputs — useful for future analytics
+          ...(complexity     ? { complexity }      : {}),
+          ...(time_minutes   ? { time_minutes }    : {}),
+          ...(output_units   ? { output_units }    : {}),
+          ...(input_units    ? { input_units }     : {}),
+          ...(conversation_rounds ? { conversation_rounds } : {}),
+          ...(self_reported  ? { self_reported }   : {}),
+        },
         source_platform: source_platform || null,
         is_public: is_public ?? true,
       })
@@ -90,96 +107,105 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    if (profile) {
-      const lastActive = profile.last_active_date;
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-      let newStreak = profile.current_streak;
-      if (lastActive === yesterdayStr) {
-        newStreak += 1;
-      } else if (lastActive !== today) {
-        newStreak = 1;
-      }
-
-      const longestStreak = Math.max(profile.longest_streak, newStreak);
-
-      await supabase
-        .from('profiles')
-        .update({
-          total_xp: profile.total_xp + xp,
-          year_xp: profile.year_xp + xp,
-          current_streak: newStreak,
-          longest_streak: longestStreak,
-          last_active_date: today,
-          achievements_this_month: profile.achievements_this_month + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-
-      // Update season participant if active season
-      const { data: activeSeason } = await supabase
-        .from('seasons')
-        .select('id')
-        .eq('is_active', true)
-        .single();
-
-      if (activeSeason) {
-        await supabase.rpc('upsert_season_xp', {
-          p_season_id: activeSeason.id,
-          p_user_id: user.id,
-          p_xp: xp,
-        }).catch(() => {
-          // RPC may not exist yet — ignore
-        });
-      }
-
-      // Insert activity feed event
-      if (is_public !== false) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('id', user.id)
-          .single();
-
-        await supabase.from('activity_feed').insert({
-          user_id: user.id,
-          event_type: 'achievement',
-          display_name: profileData?.display_name || 'Anonymous',
-          avatar_url: profileData?.avatar_url,
-          payload: {
-            achievement_id: achievement.id,
-            category,
-            title: sanitizedTitle,
-            xp,
-          },
-        });
-      }
-
-      // Calculate age level
-      const ageLevel = profile.birth_date
-        ? Math.floor((Date.now() - new Date(profile.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-        : null;
-
-      return new Response(JSON.stringify({
-        achievement,
-        stats: {
-          total_xp: profile.total_xp + xp,
-          year_xp: profile.year_xp + xp,
-          age_level: ageLevel,
-          current_streak: newStreak,
-          longest_streak: longestStreak,
-        },
-        rate_limit_remaining: rateCheck.remaining,
-      }), {
+    if (!profile) {
+      return new Response(JSON.stringify({ achievement }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ achievement }), {
+    const lastActive = profile.last_active_date;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    let newStreak = profile.current_streak;
+    if (lastActive === yesterdayStr) {
+      newStreak += 1;
+    } else if (lastActive !== today) {
+      newStreak = 1;
+    }
+
+    const longestStreak = Math.max(profile.longest_streak, newStreak);
+    const newTotalXp = profile.total_xp + xp;
+    const newYearXp = profile.year_xp + xp;
+
+    await supabase
+      .from('profiles')
+      .update({
+        total_xp: newTotalXp,
+        year_xp: newYearXp,
+        current_streak: newStreak,
+        longest_streak: longestStreak,
+        last_active_date: today,
+        achievements_this_month: profile.achievements_this_month + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+
+    // Update season XP if active season
+    const { data: activeSeason } = await supabase
+      .from('seasons')
+      .select('id')
+      .eq('is_active', true)
+      .single();
+
+    if (activeSeason) {
+      await supabase.rpc('upsert_season_xp', {
+        p_season_id: activeSeason.id,
+        p_user_id: user.id,
+        p_xp: xp,
+      }).catch(() => {});
+    }
+
+    // Insert activity feed event
+    if (is_public !== false) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      await supabase.from('activity_feed').insert({
+        user_id: user.id,
+        event_type: 'achievement',
+        display_name: profileData?.display_name || 'Anonymous',
+        avatar_url: profileData?.avatar_url,
+        payload: {
+          achievement_id: achievement.id,
+          category,
+          title: sanitizedTitle,
+          xp,
+        },
+      });
+    }
+
+    // Auto-check title unlocks with updated stats
+    const { newly_unlocked } = await checkAndUnlockTitles(supabase, user.id, {
+      total_xp: newTotalXp,
+      year_xp: newYearXp,
+      current_streak: newStreak,
+    });
+
+    // Calculate age level
+    const ageLevel = profile.birth_date
+      ? Math.floor((Date.now() - new Date(profile.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : null;
+
+    return new Response(JSON.stringify({
+      achievement,
+      stats: {
+        total_xp: newTotalXp,
+        year_xp: newYearXp,
+        age_level: ageLevel,
+        current_streak: newStreak,
+        longest_streak: longestStreak,
+      },
+      newly_unlocked,
+      rate_limit_remaining: rateCheck.remaining,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
