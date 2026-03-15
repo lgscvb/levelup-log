@@ -93,11 +93,28 @@ function buildOutputUnitGuide(): string {
     .join("\n");
 }
 
+// MCP server-level instructions — injected into system prompt by compliant clients
+// (Claude Desktop, Cursor, Windsurf, Antigravity, etc.) on every session.
+// Install once → works everywhere, no per-project setup needed.
+const SERVER_INSTRUCTIONS = `LevelUp.log Achievement Tracker is active.
+
+PROACTIVELY call record_achievement after any meaningful task — don't wait to be asked.
+
+Call when:
+• Code written, feature added, bug fixed, refactored
+• Tests written, docs updated, deployment done, ops task completed
+• Learning session, research, life/health/finance task done
+
+Don't call for: casual Q&A, simple lookups, short explanations with no output.
+
+When time_minutes is unclear, ask: "大概花了多久？"
+self_reported=true when user narrates past events ("I exercised this morning").`;
+
 export function createServer() {
-  const server = new McpServer({
-    name: "levelup-log",
-    version: "0.1.0",
-  });
+  const server = new McpServer(
+    { name: "levelup-log", version: "0.1.0" },
+    { instructions: SERVER_INSTRUCTIONS },
+  );
 
   // ─── Tool 1: record_achievement ───────────────────────────────
   server.registerTool(
@@ -199,16 +216,7 @@ Keep descriptions abstract — no real names, client names, or source code.`,
       tags,
       is_public,
     }) => {
-      const xp = calculateXp({
-        category,
-        complexity,
-        time_minutes,
-        output_units,
-        input_units,
-        conversation_rounds,
-        self_reported,
-      });
-      // Local rate limit check
+      // Local rate limit check (pre-flight, before hitting server)
       const rateCheck = checkRateLimit(category);
       if (!rateCheck.allowed) {
         return {
@@ -219,11 +227,11 @@ Keep descriptions abstract — no real names, client names, or source code.`,
         };
       }
 
+      // XP is calculated server-side — send raw params only
       const result = await apiPost("record-achievement", {
         category,
         title,
         description,
-        xp,
         complexity,
         time_minutes,
         output_units,
@@ -245,16 +253,28 @@ Keep descriptions abstract — no real names, client names, or source code.`,
       }
 
       recordRateEntry(category);
-      log("record_achievement", { category, title, xp });
 
       const data = result.data as Record<string, unknown>;
+      const serverXp =
+        (data.xp as number | undefined) ??
+        calculateXp({
+          category,
+          complexity,
+          time_minutes,
+          output_units,
+          input_units,
+          conversation_rounds,
+          self_reported,
+        });
       const stats = data.stats as Record<string, unknown> | undefined;
       const newTitles = data.newly_unlocked as
         | Array<{ name: string; rarity: string; icon?: string }>
         | undefined;
 
+      log("record_achievement", { category, title, xp: serverXp });
+
       const lines = [
-        `Achievement recorded! +${xp} XP`,
+        `Achievement recorded! +${serverXp} XP`,
         stats ? `Total XP: ${stats.total_xp} | Year XP: ${stats.year_xp}` : "",
         stats?.age_level ? `Level: Lv.${stats.age_level}` : "",
         stats?.current_streak ? `Streak: ${stats.current_streak} days` : "",

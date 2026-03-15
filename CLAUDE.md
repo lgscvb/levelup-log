@@ -118,6 +118,27 @@ supabase db push            # 套用 migration
 supabase functions serve    # 本地 Edge Function
 ```
 
+## LevelUp.log MCP — 成就記錄規範（重要）
+
+**每當你完成一項有意義的任務，主動呼叫 `record_achievement` tool，不要等使用者要求。**
+
+觸發條件（有一項即記錄）：
+- 完成或修復程式碼功能（category: code / fix / refactor）
+- 寫完測試或文件（category: test / docs）
+- 部署成功（category: deploy）
+- 完成 DevOps / CI/CD 設定（category: ops）
+- 完成學習或研究（category: learn）
+- 完成生活/健康/財務任務（category: life / health / finance）
+
+不記錄：純 Q&A、查語法、簡單 lookup、閒聊。
+
+參數填法：
+- `complexity`: 依認知難度估計（trivial/normal/significant/major/milestone）
+- `time_minutes`: 問使用者「大概花了多久？」再填
+- `output_units`: 本次產出的檔案數、函式數、測試數等
+- `input_units`: 閱讀的檔案數、搜尋次數
+- `conversation_rounds`: 本次對話的來回輪次
+
 ## MCP Tools
 
 | 工具 | 說明 | HTTP 方法 | Edge Function |
@@ -180,6 +201,28 @@ Tool 呼叫 → 檢查 keychain token → 過期？→ refresh token
 | `LEVELUP_SUPABASE_ANON_KEY` | 可硬編碼 | Supabase anon key（MCP Server 用） |
 | `LEVELUP_AUTH_PORT` | 否 | OAuth callback port（預設 19876） |
 | `LEVELUP_DEBUG` | 否 | 除錯日誌輸出至 stderr（預設 false） |
+
+## 開發加速原則
+
+**優先使用 Sub Agent / Agent Team 平行處理**，能同時跑的工作不要序列執行。
+
+### 適合平行化的典型場景
+
+| 場景 | 平行方式 |
+|------|---------|
+| 新 Edge Function + 對應前端頁面 | 一個 agent 寫 Edge Function，另一個寫前端 |
+| 多個 Supabase migration 檔案 | 各 migration 獨立，同時產出 |
+| MCP tool 實作 + Vitest 測試 | 實作與測試同時進行 |
+| 多平台 rules 檔案 | 各平台檔案互不相依，同時寫入 |
+| TypeScript 編譯檢查 + lint | 同時跑，不要等一個完成再跑另一個 |
+| 前端多頁面 i18n 補齊 | 各頁面翻譯互相獨立，分派多個 agent |
+
+### 使用原則
+
+1. **識別相依關係**：有相依的工作序列執行，無相依的全部平行
+2. **Agent 顆粒度**：每個 agent 負責一個邏輯單元（一個檔案 / 一個 function / 一個子系統）
+3. **結果整合**：平行 agent 完成後，主 agent 統一整合並跑 `tsc --noEmit` + `vitest`
+4. **避免衝突**：同一個檔案不要分派給兩個 agent 同時修改
 
 ## 程式碼慣例
 

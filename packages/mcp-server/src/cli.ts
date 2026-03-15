@@ -16,6 +16,11 @@ async function init() {
   await runInit();
 }
 
+async function heartbeat() {
+  const { main } = await import("./scripts/heartbeat.js");
+  await main();
+}
+
 async function main() {
   switch (command) {
     case "serve":
@@ -25,9 +30,12 @@ async function main() {
     case "init":
       await init();
       break;
+    case "heartbeat":
+      await heartbeat();
+      break;
     default:
       console.error(`Unknown command: ${command}`);
-      console.error("Usage: levelup-log [serve|init]");
+      console.error("Usage: levelup-log [serve|init|heartbeat]");
       process.exit(1);
   }
 }

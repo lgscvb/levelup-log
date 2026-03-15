@@ -22,6 +22,7 @@
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist",
     "inspect": "npx @modelcontextprotocol/inspector tsx src/cli.ts serve",
+    "heartbeat": "tsx src/scripts/heartbeat.ts",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {

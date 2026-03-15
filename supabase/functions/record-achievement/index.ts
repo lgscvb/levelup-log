@@ -4,11 +4,80 @@ import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { sanitizeText } from '../_shared/sanitize.ts';
 import { checkAndUnlockTitles } from '../_shared/unlock-titles.ts';
 
-const VALID_CATEGORIES = [
-  'code', 'fix', 'deploy', 'test', 'docs', 'refactor', 'review',
-  'learn', 'ops', 'milestone', 'life', 'health', 'finance', 'social',
-  'creative', 'spiritual', 'hobby',
-];
+// ─── XP Formula (server-authoritative) ───────────────────────────────────────
+//
+// XP is calculated here on the server — the client sends raw params only.
+// This prevents clients from submitting arbitrary XP values.
+//
+// Formula:
+//   base    = COMPLEXITY_BASE[complexity] × timeMultiplier(time_minutes)
+//   bonuses = outputBonus(output_units) + inputBonus(input_units) + roundsBonus(rounds)
+//   raw_xp  = clamp(round((base + bonuses) × category.xp_weight), 5, 500)
+//   xp      = self_reported ? round(raw_xp × 0.85) : raw_xp
+// ─────────────────────────────────────────────────────────────────────────────
+
+type Complexity = 'trivial' | 'normal' | 'significant' | 'major' | 'milestone';
+
+const COMPLEXITY_BASE: Record<Complexity, number> = {
+  trivial: 10,
+  normal: 30,
+  significant: 75,
+  major: 150,
+  milestone: 300,
+};
+
+// xp_weight per category — keep in sync with packages/mcp-server/src/utils/config.ts
+const CATEGORY_XP_WEIGHT: Record<string, number> = {
+  code: 1.0, fix: 1.1, deploy: 1.3, test: 1.0, docs: 0.9,
+  refactor: 1.0, review: 0.9, ops: 1.2, learn: 1.0, milestone: 1.5,
+  life: 0.9, health: 1.1, finance: 1.0, social: 0.9, creative: 1.0,
+  spiritual: 0.85, hobby: 0.8,
+};
+
+const VALID_CATEGORIES = Object.keys(CATEGORY_XP_WEIGHT);
+
+function timeMultiplier(minutes: number): number {
+  if (minutes < 15) return 0.7;
+  if (minutes < 60) return 1.0;
+  if (minutes < 180) return 1.3;
+  return 1.6;
+}
+
+function outputBonus(units: number): number {
+  if (units <= 0) return 0;
+  return Math.min(Math.round(Math.log2(units + 1) * 12), 60);
+}
+
+function inputBonus(units: number): number {
+  return Math.min(Math.max(units, 0), 15);
+}
+
+function roundsBonus(rounds: number): number {
+  return Math.min(Math.max(rounds, 0), 25);
+}
+
+function calculateXp(params: {
+  category: string;
+  complexity: Complexity;
+  time_minutes?: number;
+  output_units?: number;
+  input_units?: number;
+  conversation_rounds?: number;
+  self_reported?: boolean;
+}): number {
+  const catWeight = CATEGORY_XP_WEIGHT[params.category] ?? 1.0;
+  const base =
+    COMPLEXITY_BASE[params.complexity] *
+    timeMultiplier(params.time_minutes ?? 30);
+  const bonuses =
+    outputBonus(params.output_units ?? 0) +
+    inputBonus(params.input_units ?? 0) +
+    roundsBonus(params.conversation_rounds ?? 0);
+  const raw = Math.min(500, Math.max(5, Math.round((base + bonuses) * catWeight)));
+  return params.self_reported ? Math.max(5, Math.round(raw * 0.85)) : raw;
+}
+
+// ─── Handler ──────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -38,14 +107,13 @@ Deno.serve(async (req) => {
     // Parse body
     const body = await req.json();
     const {
-      category, title, description, xp, tags, is_public,
+      category, title, description, tags, is_public,
       metadata, source_platform,
-      // XP formula params (stored in metadata for analytics)
       complexity, time_minutes, output_units, input_units,
       conversation_rounds, self_reported,
     } = body;
 
-    // Validate
+    // Validate required fields
     if (!category || !VALID_CATEGORIES.includes(category)) {
       return new Response(JSON.stringify({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` }), {
         status: 400,
@@ -58,12 +126,23 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!xp || xp < 5 || xp > 500) {
-      return new Response(JSON.stringify({ error: 'xp must be between 5 and 500' }), {
+    if (!complexity || !COMPLEXITY_BASE[complexity as Complexity]) {
+      return new Response(JSON.stringify({ error: 'complexity must be one of: trivial, normal, significant, major, milestone' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // ── XP calculated server-side ──────────────────────────────────────────
+    const xp = calculateXp({
+      category,
+      complexity: complexity as Complexity,
+      time_minutes,
+      output_units,
+      input_units,
+      conversation_rounds,
+      self_reported,
+    });
 
     // Sanitize text fields
     const sanitizedTitle = sanitizeText(title);
@@ -71,7 +150,7 @@ Deno.serve(async (req) => {
 
     const supabase = getSupabaseClient(authHeader);
 
-    // Insert achievement (store XP formula params in metadata for analytics)
+    // Insert achievement
     const { data: achievement, error: insertError } = await supabase
       .from('achievements')
       .insert({
@@ -83,13 +162,12 @@ Deno.serve(async (req) => {
         tags: tags || [],
         metadata: {
           ...(metadata || {}),
-          // XP formula inputs — useful for future analytics
-          ...(complexity     ? { complexity }      : {}),
-          ...(time_minutes   ? { time_minutes }    : {}),
-          ...(output_units   ? { output_units }    : {}),
-          ...(input_units    ? { input_units }     : {}),
-          ...(conversation_rounds ? { conversation_rounds } : {}),
-          ...(self_reported  ? { self_reported }   : {}),
+          complexity,
+          ...(time_minutes        != null ? { time_minutes }        : {}),
+          ...(output_units        != null ? { output_units }        : {}),
+          ...(input_units         != null ? { input_units }         : {}),
+          ...(conversation_rounds != null ? { conversation_rounds } : {}),
+          ...(self_reported               ? { self_reported }       : {}),
         },
         source_platform: source_platform || null,
         is_public: is_public ?? true,
@@ -108,7 +186,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (!profile) {
-      return new Response(JSON.stringify({ achievement }), {
+      return new Response(JSON.stringify({ achievement, xp }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -170,16 +248,11 @@ Deno.serve(async (req) => {
         event_type: 'achievement',
         display_name: profileData?.display_name || 'Anonymous',
         avatar_url: profileData?.avatar_url,
-        payload: {
-          achievement_id: achievement.id,
-          category,
-          title: sanitizedTitle,
-          xp,
-        },
+        payload: { achievement_id: achievement.id, category, title: sanitizedTitle, xp },
       });
     }
 
-    // Auto-check title unlocks with updated stats
+    // Auto-check title unlocks
     const { newly_unlocked } = await checkAndUnlockTitles(supabase, user.id, {
       total_xp: newTotalXp,
       year_xp: newYearXp,
@@ -193,6 +266,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       achievement,
+      xp,
       stats: {
         total_xp: newTotalXp,
         year_xp: newYearXp,
