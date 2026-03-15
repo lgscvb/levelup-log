@@ -6,6 +6,15 @@ export const LOCALES = [
   "ko",
   "es",
   "pt-BR",
+  "fr",
+  "de",
+  "it",
+  "ru",
+  "ar",
+  "nl",
+  "tr",
+  "vi",
+  "id",
 ] as const;
 export type Locale = (typeof LOCALES)[number];
 export const defaultLocale: Locale = "en";
@@ -18,6 +27,15 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   ko: "한국어",
   es: "Español",
   "pt-BR": "Português",
+  fr: "Français",
+  de: "Deutsch",
+  it: "Italiano",
+  ru: "Русский",
+  ar: "العربية",
+  nl: "Nederlands",
+  tr: "Türkçe",
+  vi: "Tiếng Việt",
+  id: "Bahasa Indonesia",
 };
 
 type Translations = {
@@ -534,6 +552,600 @@ export const translations: Record<Locale, Translations> = {
       categoryBreakdown: "Distribuição por categoria",
       recentAchievements: "Conquistas recentes",
       noPublicAchievements: "Ainda não há conquistas públicas.",
+    },
+  },
+  fr: {
+    nav: { leaderboard: "Classement", dashboard: "Tableau de bord" },
+    home: {
+      tagline: "Transformez vos tâches quotidiennes en accomplissements.",
+      tagline2:
+        "Votre âge est votre niveau — la question est ce que vous avez accompli.",
+      installComment: "# Installer en une commande",
+      features: {
+        gamify: {
+          title: "Gamifiez tout",
+          desc: "Transformez les tâches en succès. Code, vie, santé, apprentissage — tout compte.",
+        },
+        streak: {
+          title: "Suivez votre streak",
+          desc: "Construisez un élan avec des streaks quotidiens. Votre coach IA vous motive.",
+        },
+        compete: {
+          title: "Compétez & Partagez",
+          desc: "Montez dans le classement. Débloquez des titres. Partagez votre profil avec le monde.",
+        },
+      },
+      footer:
+        "Compatible avec Claude Desktop, Claude Code, ChatGPT Desktop, Cursor et plus.",
+    },
+    dashboard: {
+      title: "Tableau de bord",
+      publicProfile: "Profil public",
+      settings: "Paramètres",
+      totalXp: "XP Total",
+      yearXp: "XP de l'année",
+      streak: "Streak",
+      bestStreak: "Meilleur streak",
+      recentAchievements: "Succès récents",
+      noAchievements:
+        "Pas encore de succès. Commencez à utiliser le MCP pour enregistrer le premier !",
+      noAchievementsHint: "# Installer en une commande",
+    },
+    settings: {
+      title: "Paramètres",
+      displayName: "Nom d'affichage",
+      bio: "Bio",
+      birthDate: "Date de naissance (votre niveau = votre âge)",
+      publicDefault: "Succès publics par défaut",
+      save: "Enregistrer",
+      saving: "Enregistrement...",
+      saved: "Paramètres sauvegardés !",
+      signOut: "Se déconnecter",
+    },
+    leaderboard: {
+      title: "Classement",
+      season: "Saison",
+      thisYear: "Cette année",
+      allTime: "Tout le temps",
+      noEntries: "Pas encore d'entrées. Soyez le premier !",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "XP Total",
+      yearXp: "XP de l'année",
+      streak: "Streak",
+      titles: "Titres",
+      categoryBreakdown: "Répartition par catégorie",
+      recentAchievements: "Succès récents",
+      noPublicAchievements: "Pas encore de succès publics.",
+    },
+  },
+  de: {
+    nav: { leaderboard: "Rangliste", dashboard: "Dashboard" },
+    home: {
+      tagline:
+        "Verwandle deine täglichen Aufgaben in spielerische Errungenschaften.",
+      tagline2:
+        "Dein Alter ist dein Level — die Frage ist, was du dabei erreicht hast.",
+      installComment: "# In einem Befehl installieren",
+      features: {
+        gamify: {
+          title: "Alles gamifizieren",
+          desc: "Verwandle tägliche Aufgaben in Errungenschaften. Code, Leben, Gesundheit, Lernen — alles zählt.",
+        },
+        streak: {
+          title: "Streak verfolgen",
+          desc: "Baue Schwung mit täglichen Streaks auf. Dein KI-Coach hält dich motiviert.",
+        },
+        compete: {
+          title: "Wettkämpfen & Teilen",
+          desc: "Klettere in der Rangliste. Schalte Titel frei. Teile dein Profil mit der Welt.",
+        },
+      },
+      footer:
+        "Funktioniert mit Claude Desktop, Claude Code, ChatGPT Desktop, Cursor und mehr.",
+    },
+    dashboard: {
+      title: "Dashboard",
+      publicProfile: "Öffentliches Profil",
+      settings: "Einstellungen",
+      totalXp: "Gesamt-XP",
+      yearXp: "Jahres-XP",
+      streak: "Streak",
+      bestStreak: "Bester Streak",
+      recentAchievements: "Letzte Errungenschaften",
+      noAchievements:
+        "Noch keine Errungenschaften. Starte den MCP, um die erste aufzuzeichnen!",
+      noAchievementsHint: "# In einem Befehl installieren",
+    },
+    settings: {
+      title: "Einstellungen",
+      displayName: "Anzeigename",
+      bio: "Bio",
+      birthDate: "Geburtsdatum (dein Level = dein Alter)",
+      publicDefault: "Errungenschaften standardmäßig öffentlich",
+      save: "Speichern",
+      saving: "Speichern...",
+      saved: "Einstellungen gespeichert!",
+      signOut: "Abmelden",
+    },
+    leaderboard: {
+      title: "Rangliste",
+      season: "Saison",
+      thisYear: "Dieses Jahr",
+      allTime: "Aller Zeiten",
+      noEntries: "Noch keine Einträge. Sei der Erste!",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "Gesamt-XP",
+      yearXp: "Jahres-XP",
+      streak: "Streak",
+      titles: "Titel",
+      categoryBreakdown: "Kategorieaufteilung",
+      recentAchievements: "Letzte Errungenschaften",
+      noPublicAchievements: "Noch keine öffentlichen Errungenschaften.",
+    },
+  },
+  it: {
+    nav: { leaderboard: "Classifica", dashboard: "Dashboard" },
+    home: {
+      tagline: "Trasforma i tuoi compiti quotidiani in traguardi da gioco.",
+      tagline2:
+        "La tua età è il tuo livello — la domanda è cosa hai realizzato.",
+      installComment: "# Installa con un comando",
+      features: {
+        gamify: {
+          title: "Gamifica tutto",
+          desc: "Trasforma le attività quotidiane in traguardi. Codice, vita, salute, apprendimento — tutto conta.",
+        },
+        streak: {
+          title: "Monitora la tua striscia",
+          desc: "Costruisci slancio con le strisce giornaliere. Il tuo coach IA ti mantiene motivato.",
+        },
+        compete: {
+          title: "Gareggia e Condividi",
+          desc: "Scala la classifica. Sblocca titoli. Condividi il tuo profilo con il mondo.",
+        },
+      },
+      footer:
+        "Funziona con Claude Desktop, Claude Code, ChatGPT Desktop, Cursor e altro.",
+    },
+    dashboard: {
+      title: "Dashboard",
+      publicProfile: "Profilo pubblico",
+      settings: "Impostazioni",
+      totalXp: "XP Totale",
+      yearXp: "XP dell'anno",
+      streak: "Striscia",
+      bestStreak: "Migliore striscia",
+      recentAchievements: "Traguardi recenti",
+      noAchievements:
+        "Ancora nessun traguardo. Inizia a usare il MCP per registrare il primo!",
+      noAchievementsHint: "# Installa con un comando",
+    },
+    settings: {
+      title: "Impostazioni",
+      displayName: "Nome visualizzato",
+      bio: "Bio",
+      birthDate: "Data di nascita (il tuo livello = la tua età)",
+      publicDefault: "Traguardi pubblici per impostazione predefinita",
+      save: "Salva",
+      saving: "Salvataggio...",
+      saved: "Impostazioni salvate!",
+      signOut: "Esci",
+    },
+    leaderboard: {
+      title: "Classifica",
+      season: "Stagione",
+      thisYear: "Quest'anno",
+      allTime: "Sempre",
+      noEntries: "Ancora nessun partecipante. Sii il primo!",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "XP Totale",
+      yearXp: "XP dell'anno",
+      streak: "Striscia",
+      titles: "Titoli",
+      categoryBreakdown: "Distribuzione per categoria",
+      recentAchievements: "Traguardi recenti",
+      noPublicAchievements: "Ancora nessun traguardo pubblico.",
+    },
+  },
+  ru: {
+    nav: { leaderboard: "Рейтинг", dashboard: "Панель" },
+    home: {
+      tagline: "Преврати ежедневные задачи в игровые достижения.",
+      tagline2:
+        "Твой возраст — твой уровень. Вопрос в том, что ты успел на этом уровне.",
+      installComment: "# Установить одной командой",
+      features: {
+        gamify: {
+          title: "Геймифицируй всё",
+          desc: "Превращай задачи в достижения. Код, жизнь, здоровье, учёба — всё считается.",
+        },
+        streak: {
+          title: "Отслеживай серию",
+          desc: "Набирай темп ежедневными сериями. Твой ИИ-тренер держит тебя мотивированным.",
+        },
+        compete: {
+          title: "Соревнуйся и делись",
+          desc: "Поднимайся в рейтинге. Открывай титулы. Делись профилем с миром.",
+        },
+      },
+      footer:
+        "Работает с Claude Desktop, Claude Code, ChatGPT Desktop, Cursor и другими.",
+    },
+    dashboard: {
+      title: "Панель",
+      publicProfile: "Публичный профиль",
+      settings: "Настройки",
+      totalXp: "Всего XP",
+      yearXp: "XP за год",
+      streak: "Серия",
+      bestStreak: "Лучшая серия",
+      recentAchievements: "Последние достижения",
+      noAchievements:
+        "Пока нет достижений. Начни использовать MCP, чтобы записать первое!",
+      noAchievementsHint: "# Установить одной командой",
+    },
+    settings: {
+      title: "Настройки",
+      displayName: "Отображаемое имя",
+      bio: "О себе",
+      birthDate: "Дата рождения (твой уровень = твой возраст)",
+      publicDefault: "Достижения публичны по умолчанию",
+      save: "Сохранить",
+      saving: "Сохранение...",
+      saved: "Настройки сохранены!",
+      signOut: "Выйти",
+    },
+    leaderboard: {
+      title: "Рейтинг",
+      season: "Сезон",
+      thisYear: "Этот год",
+      allTime: "Всё время",
+      noEntries: "Пока никого нет. Будь первым!",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "Всего XP",
+      yearXp: "XP за год",
+      streak: "Серия",
+      titles: "Титулы",
+      categoryBreakdown: "Разбивка по категориям",
+      recentAchievements: "Последние достижения",
+      noPublicAchievements: "Пока нет публичных достижений.",
+    },
+  },
+  ar: {
+    nav: { leaderboard: "لوحة المتصدرين", dashboard: "لوحة التحكم" },
+    home: {
+      tagline: "حوّل مهامك اليومية إلى إنجازات على طريقة الألعاب.",
+      tagline2: "عمرك هو مستواك — السؤال هو ماذا أنجزت في هذا المستوى.",
+      installComment: "# التثبيت بأمر واحد",
+      features: {
+        gamify: {
+          title: "حوّل كل شيء إلى لعبة",
+          desc: "اجعل المهام اليومية إنجازات. كود، حياة، صحة، تعلّم — كل شيء يحتسب.",
+        },
+        streak: {
+          title: "تتبع سلسلتك",
+          desc: "ابنِ زخماً بالسلاسل اليومية. مدربك الذكي يُبقيك متحفزاً.",
+        },
+        compete: {
+          title: "تنافس وشارك",
+          desc: "تسلق لوحة المتصدرين. افتح ألقاباً. شارك ملفك الشخصي مع العالم.",
+        },
+      },
+      footer:
+        "يعمل مع Claude Desktop وClaude Code وChatGPT Desktop وCursor والمزيد.",
+    },
+    dashboard: {
+      title: "لوحة التحكم",
+      publicProfile: "الملف الشخصي العام",
+      settings: "الإعدادات",
+      totalXp: "إجمالي XP",
+      yearXp: "XP السنة",
+      streak: "السلسلة",
+      bestStreak: "أفضل سلسلة",
+      recentAchievements: "أحدث الإنجازات",
+      noAchievements:
+        "لا توجد إنجازات بعد. ابدأ باستخدام MCP لتسجيل أول إنجاز!",
+      noAchievementsHint: "# التثبيت بأمر واحد",
+    },
+    settings: {
+      title: "الإعدادات",
+      displayName: "الاسم المعروض",
+      bio: "نبذة عني",
+      birthDate: "تاريخ الميلاد (مستواك = عمرك)",
+      publicDefault: "الإنجازات عامة بشكل افتراضي",
+      save: "حفظ",
+      saving: "جارٍ الحفظ...",
+      saved: "تم حفظ الإعدادات!",
+      signOut: "تسجيل الخروج",
+    },
+    leaderboard: {
+      title: "لوحة المتصدرين",
+      season: "الموسم",
+      thisYear: "هذا العام",
+      allTime: "كل الوقت",
+      noEntries: "لا يوجد مشاركون بعد. كن الأول!",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "إجمالي XP",
+      yearXp: "XP السنة",
+      streak: "السلسلة",
+      titles: "الألقاب",
+      categoryBreakdown: "توزيع الفئات",
+      recentAchievements: "أحدث الإنجازات",
+      noPublicAchievements: "لا توجد إنجازات عامة بعد.",
+    },
+  },
+  nl: {
+    nav: { leaderboard: "Ranglijst", dashboard: "Dashboard" },
+    home: {
+      tagline: "Verander je dagelijkse taken in game-achtige prestaties.",
+      tagline2:
+        "Je leeftijd is je niveau — de vraag is wat je op dat niveau hebt bereikt.",
+      installComment: "# Installeer met één commando",
+      features: {
+        gamify: {
+          title: "Gamificeer alles",
+          desc: "Verander dagelijkse taken in prestaties. Code, leven, gezondheid, leren — alles telt.",
+        },
+        streak: {
+          title: "Volg je streak",
+          desc: "Bouw momentum op met dagelijkse streaks. Je AI-coach houdt je gemotiveerd.",
+        },
+        compete: {
+          title: "Concurreer en deel",
+          desc: "Klim in de ranglijst. Ontgrendel titels. Deel je profiel met de wereld.",
+        },
+      },
+      footer:
+        "Werkt met Claude Desktop, Claude Code, ChatGPT Desktop, Cursor en meer.",
+    },
+    dashboard: {
+      title: "Dashboard",
+      publicProfile: "Openbaar profiel",
+      settings: "Instellingen",
+      totalXp: "Totaal XP",
+      yearXp: "Jaar XP",
+      streak: "Streak",
+      bestStreak: "Beste streak",
+      recentAchievements: "Recente prestaties",
+      noAchievements:
+        "Nog geen prestaties. Begin de MCP te gebruiken om de eerste te registreren!",
+      noAchievementsHint: "# Installeer met één commando",
+    },
+    settings: {
+      title: "Instellingen",
+      displayName: "Weergavenaam",
+      bio: "Bio",
+      birthDate: "Geboortedatum (jouw niveau = jouw leeftijd)",
+      publicDefault: "Prestaties standaard openbaar",
+      save: "Opslaan",
+      saving: "Opslaan...",
+      saved: "Instellingen opgeslagen!",
+      signOut: "Uitloggen",
+    },
+    leaderboard: {
+      title: "Ranglijst",
+      season: "Seizoen",
+      thisYear: "Dit jaar",
+      allTime: "Altijd",
+      noEntries: "Nog geen deelnemers. Wees de eerste!",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "Totaal XP",
+      yearXp: "Jaar XP",
+      streak: "Streak",
+      titles: "Titels",
+      categoryBreakdown: "Categorieverdeling",
+      recentAchievements: "Recente prestaties",
+      noPublicAchievements: "Nog geen openbare prestaties.",
+    },
+  },
+  tr: {
+    nav: { leaderboard: "Lider Tablosu", dashboard: "Gösterge Paneli" },
+    home: {
+      tagline: "Günlük görevlerini oyun gibi başarılara dönüştür.",
+      tagline2: "Yaşın senin seviyendir — soru bu seviyede ne başardığındır.",
+      installComment: "# Tek komutla kur",
+      features: {
+        gamify: {
+          title: "Her şeyi oyunlaştır",
+          desc: "Günlük görevleri başarılara dönüştür. Kod, yaşam, sağlık, öğrenme — her şey sayılır.",
+        },
+        streak: {
+          title: "Serini takip et",
+          desc: "Günlük serilerle ivme kazan. Yapay zeka koçun seni motive tutar.",
+        },
+        compete: {
+          title: "Yarış ve Paylaş",
+          desc: "Lider tablosuna tırman. Unvanlar kazan. Profilini dünyayla paylaş.",
+        },
+      },
+      footer:
+        "Claude Desktop, Claude Code, ChatGPT Desktop, Cursor ve daha fazlasıyla çalışır.",
+    },
+    dashboard: {
+      title: "Gösterge Paneli",
+      publicProfile: "Genel Profil",
+      settings: "Ayarlar",
+      totalXp: "Toplam XP",
+      yearXp: "Yıllık XP",
+      streak: "Seri",
+      bestStreak: "En İyi Seri",
+      recentAchievements: "Son Başarılar",
+      noAchievements:
+        "Henüz başarı yok. İlkini kaydetmek için MCP'yi kullanmaya başla!",
+      noAchievementsHint: "# Tek komutla kur",
+    },
+    settings: {
+      title: "Ayarlar",
+      displayName: "Görünen Ad",
+      bio: "Hakkımda",
+      birthDate: "Doğum Tarihi (seviyeniz = yaşınız)",
+      publicDefault: "Başarılar varsayılan olarak herkese açık",
+      save: "Kaydet",
+      saving: "Kaydediliyor...",
+      saved: "Ayarlar kaydedildi!",
+      signOut: "Çıkış Yap",
+    },
+    leaderboard: {
+      title: "Lider Tablosu",
+      season: "Sezon",
+      thisYear: "Bu Yıl",
+      allTime: "Tüm Zamanlar",
+      noEntries: "Henüz kimse yok. İlk sen ol!",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "Toplam XP",
+      yearXp: "Yıllık XP",
+      streak: "Seri",
+      titles: "Unvanlar",
+      categoryBreakdown: "Kategori Dağılımı",
+      recentAchievements: "Son Başarılar",
+      noPublicAchievements: "Henüz genel başarı yok.",
+    },
+  },
+  vi: {
+    nav: { leaderboard: "Bảng xếp hạng", dashboard: "Bảng điều khiển" },
+    home: {
+      tagline:
+        "Biến công việc hàng ngày thành những thành tích như trong game.",
+      tagline2:
+        "Tuổi của bạn là cấp độ của bạn — câu hỏi là bạn đã làm được gì ở cấp đó.",
+      installComment: "# Cài đặt bằng một lệnh",
+      features: {
+        gamify: {
+          title: "Gamify mọi thứ",
+          desc: "Biến công việc thành thành tích. Code, cuộc sống, sức khỏe, học tập — mọi thứ đều được tính.",
+        },
+        streak: {
+          title: "Theo dõi chuỗi ngày",
+          desc: "Xây dựng đà với chuỗi ngày liên tiếp. Huấn luyện viên AI giữ bạn có động lực.",
+        },
+        compete: {
+          title: "Cạnh tranh & Chia sẻ",
+          desc: "Leo lên bảng xếp hạng. Mở khóa danh hiệu. Chia sẻ hồ sơ với thế giới.",
+        },
+      },
+      footer:
+        "Hoạt động với Claude Desktop, Claude Code, ChatGPT Desktop, Cursor và hơn thế nữa.",
+    },
+    dashboard: {
+      title: "Bảng điều khiển",
+      publicProfile: "Hồ sơ công khai",
+      settings: "Cài đặt",
+      totalXp: "Tổng XP",
+      yearXp: "XP năm nay",
+      streak: "Chuỗi ngày",
+      bestStreak: "Chuỗi tốt nhất",
+      recentAchievements: "Thành tích gần đây",
+      noAchievements:
+        "Chưa có thành tích. Bắt đầu dùng MCP để ghi lại thành tích đầu tiên!",
+      noAchievementsHint: "# Cài đặt bằng một lệnh",
+    },
+    settings: {
+      title: "Cài đặt",
+      displayName: "Tên hiển thị",
+      bio: "Giới thiệu",
+      birthDate: "Ngày sinh (cấp độ = tuổi)",
+      publicDefault: "Thành tích công khai theo mặc định",
+      save: "Lưu",
+      saving: "Đang lưu...",
+      saved: "Đã lưu cài đặt!",
+      signOut: "Đăng xuất",
+    },
+    leaderboard: {
+      title: "Bảng xếp hạng",
+      season: "Mùa giải",
+      thisYear: "Năm nay",
+      allTime: "Mọi thời đại",
+      noEntries: "Chưa có ai. Hãy là người đầu tiên!",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "Tổng XP",
+      yearXp: "XP năm nay",
+      streak: "Chuỗi ngày",
+      titles: "Danh hiệu",
+      categoryBreakdown: "Phân loại theo danh mục",
+      recentAchievements: "Thành tích gần đây",
+      noPublicAchievements: "Chưa có thành tích công khai.",
+    },
+  },
+  id: {
+    nav: { leaderboard: "Papan Peringkat", dashboard: "Dasbor" },
+    home: {
+      tagline: "Ubah tugas harianmu menjadi pencapaian seperti game.",
+      tagline2:
+        "Usiamu adalah levelmu — pertanyaannya adalah apa yang kamu capai di level itu.",
+      installComment: "# Instal dengan satu perintah",
+      features: {
+        gamify: {
+          title: "Gamifikasi segalanya",
+          desc: "Ubah tugas harian menjadi pencapaian. Kode, kehidupan, kesehatan, belajar — semua dihitung.",
+        },
+        streak: {
+          title: "Lacak streakmu",
+          desc: "Bangun momentum dengan streak harian. Pelatih AI-mu membuatmu tetap termotivasi.",
+        },
+        compete: {
+          title: "Bersaing & Berbagi",
+          desc: "Naiki papan peringkat. Buka kunci gelar. Bagikan profilmu dengan dunia.",
+        },
+      },
+      footer:
+        "Bekerja dengan Claude Desktop, Claude Code, ChatGPT Desktop, Cursor, dan lainnya.",
+    },
+    dashboard: {
+      title: "Dasbor",
+      publicProfile: "Profil Publik",
+      settings: "Pengaturan",
+      totalXp: "Total XP",
+      yearXp: "XP Tahun Ini",
+      streak: "Streak",
+      bestStreak: "Streak Terbaik",
+      recentAchievements: "Pencapaian Terbaru",
+      noAchievements:
+        "Belum ada pencapaian. Mulai gunakan MCP untuk mencatat yang pertama!",
+      noAchievementsHint: "# Instal dengan satu perintah",
+    },
+    settings: {
+      title: "Pengaturan",
+      displayName: "Nama Tampilan",
+      bio: "Bio",
+      birthDate: "Tanggal Lahir (levelmu = usiamu)",
+      publicDefault: "Pencapaian publik secara default",
+      save: "Simpan",
+      saving: "Menyimpan...",
+      saved: "Pengaturan tersimpan!",
+      signOut: "Keluar",
+    },
+    leaderboard: {
+      title: "Papan Peringkat",
+      season: "Musim",
+      thisYear: "Tahun Ini",
+      allTime: "Sepanjang Waktu",
+      noEntries: "Belum ada peserta. Jadilah yang pertama!",
+      xp: "XP",
+    },
+    profile: {
+      totalXp: "Total XP",
+      yearXp: "XP Tahun Ini",
+      streak: "Streak",
+      titles: "Gelar",
+      categoryBreakdown: "Distribusi Kategori",
+      recentAchievements: "Pencapaian Terbaru",
+      noPublicAchievements: "Belum ada pencapaian publik.",
     },
   },
 };
