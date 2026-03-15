@@ -12,11 +12,11 @@ port = 54323
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:19876/callback"]
+site_url = "https://web-alpha-three-24.vercel.app"
+additional_redirect_urls = ["http://localhost:3000/**", "http://localhost:19876/callback", "https://web-alpha-three-24.vercel.app/**"]
 
 [auth.external.google]
 enabled = true
-client_id = "env(GOOGLE_CLIENT_ID)"
+client_id = "743652001579-pl398olnbg3ppau5t8u3g5uo6s5f9f53.apps.googleusercontent.com"
 secret = "env(GOOGLE_CLIENT_SECRET)"
 redirect_uri = "http://localhost:54321/auth/v1/callback"
