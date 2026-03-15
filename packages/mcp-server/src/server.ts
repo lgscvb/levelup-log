@@ -5,6 +5,81 @@ import { checkRateLimit, recordRateEntry } from "./utils/rate-limiter.js";
 import { apiGet, apiPost } from "./utils/api.js";
 import { log } from "./utils/logger.js";
 
+// ─── XP Formula ──────────────────────────────────────────────────────────────
+//
+// Deterministic XP calculation so all agents produce consistent scores.
+//
+// Factors:
+//   complexity    — cognitive difficulty tier (base XP)
+//   time_minutes  — actual time invested (multiplier)
+//   output_units  — files changed / items created / tasks completed (additive bonus)
+//   input_units   — files read / resources consulted (lighter additive bonus)
+//   conversation_rounds — back-and-forth exchanges in the session (additive bonus)
+//
+// Formula:
+//   base     = COMPLEXITY_BASE[complexity] × time_multiplier(time_minutes)
+//   bonuses  = output_bonus(output_units)
+//            + input_bonus(input_units)
+//            + rounds_bonus(conversation_rounds)
+//   xp       = clamp(round(base + bonuses), 5, 500)
+//
+// Design choices:
+//   • output weighted 3× input (producing > consuming)
+//   • all bonuses are capped to prevent abuse / runaway XP
+//   • log-diminishing returns on output keeps large PRs sane
+// ─────────────────────────────────────────────────────────────────────────────
+
+type Complexity = "trivial" | "normal" | "significant" | "major" | "milestone";
+
+const COMPLEXITY_BASE: Record<Complexity, number> = {
+  trivial: 10,
+  normal: 30,
+  significant: 75,
+  major: 150,
+  milestone: 300,
+};
+
+function timeMultiplier(minutes: number): number {
+  if (minutes < 15) return 0.7;
+  if (minutes < 60) return 1.0;
+  if (minutes < 180) return 1.3;
+  return 1.6;
+}
+
+// Diminishing returns: 1→3, 5→10, 10→15, 20→21, cap 60
+function outputBonus(units: number): number {
+  return Math.min(Math.round(Math.log2(units + 1) * 12), 60);
+}
+
+// Lighter signal: each input unit = 1 XP, cap 15
+function inputBonus(units: number): number {
+  return Math.min(units, 15);
+}
+
+// Each round = 1 XP, cap 25
+function roundsBonus(rounds: number): number {
+  return Math.min(rounds, 25);
+}
+
+export function calculateXp(params: {
+  complexity: Complexity;
+  time_minutes?: number;
+  output_units?: number;
+  input_units?: number;
+  conversation_rounds?: number;
+}): number {
+  const base =
+    COMPLEXITY_BASE[params.complexity] *
+    timeMultiplier(params.time_minutes ?? 30);
+
+  const bonuses =
+    outputBonus(params.output_units ?? 0) +
+    inputBonus(params.input_units ?? 0) +
+    roundsBonus(params.conversation_rounds ?? 0);
+
+  return Math.min(500, Math.max(5, Math.round(base + bonuses)));
+}
+
 export function createServer() {
   const server = new McpServer({
     name: "levelup-log",
@@ -21,12 +96,21 @@ export function createServer() {
 WHEN TO CALL: Whenever the conversation involved real effort and produced a tangible output. Don't wait to be asked — if the user finished something, record it.
 DO NOT CALL for: simple questions answered, casual chat, trivial lookups with no output.
 
-XP IS CALCULATED FROM complexity + time_minutes — do NOT guess xp yourself:
-  complexity base: trivial=10, normal=30, significant=75, major=150, milestone=300
-  time multiplier: <15min→×0.7, 15-60min→×1.0, 1-3hr→×1.3, 3hr+→×1.6
-  Example: significant task (75) × 1.3 (1-2hr) = ~98 XP
+XP IS COMPUTED FROM THESE PARAMETERS — fill as many as you can observe:
+  complexity   — cognitive difficulty (required)
+  time_minutes — how long it took; ASK the user if unsure: "大概花了你多久？"
+  output_units — count of files changed / tasks completed / items created
+  input_units  — count of files read / resources consulted
+  conversation_rounds — number of message exchanges in this session
 
-IF UNSURE about time spent, ASK the user before calling: "大概花了你多久？" — this ensures fair XP across different agents and sessions.
+XP formula (server computes, you do NOT guess):
+  base = complexity_base × time_mult
+  bonuses = output_bonus(log-diminishing, cap 60)
+          + input_bonus(cap 15)
+          + rounds_bonus(cap 25)
+  xp = clamp(base + bonuses, 5, 500)
+
+Example: significant(75) × 1.3hr + 4 files(14) + 20 reads(15) + 25 rounds(25) = 152 XP
 
 Categories: ${ACHIEVEMENT_CATEGORIES.join(", ")}.
 Keep descriptions abstract — no real company names, client names, or source code.`,
@@ -43,14 +127,35 @@ Keep descriptions abstract — no real company names, client names, or source co
         complexity: z
           .enum(["trivial", "normal", "significant", "major", "milestone"])
           .describe(
-            "Task complexity: trivial=quick lookup, normal=typical task, significant=multi-step work, major=large feature, milestone=exceptional achievement",
+            "Cognitive difficulty: trivial=quick lookup/fix, normal=typical task, significant=multi-step work, major=large feature/project, milestone=exceptional achievement",
           ),
         time_minutes: z
           .number()
           .min(1)
           .optional()
           .describe(
-            "Estimated minutes spent. If unknown, ask the user before recording.",
+            "Estimated minutes spent on this task. Ask the user if unsure.",
+          ),
+        output_units: z
+          .number()
+          .min(0)
+          .optional()
+          .describe(
+            "Count of tangible outputs: files changed, tasks completed, items created, pages written, etc.",
+          ),
+        input_units: z
+          .number()
+          .min(0)
+          .optional()
+          .describe(
+            "Count of resources consumed: files read, docs consulted, searches done, etc.",
+          ),
+        conversation_rounds: z
+          .number()
+          .min(0)
+          .optional()
+          .describe(
+            "Number of message exchanges (user + assistant turns) in this conversation session.",
           ),
         tags: z
           .array(z.string())
@@ -69,24 +174,19 @@ Keep descriptions abstract — no real company names, client names, or source co
       description,
       complexity,
       time_minutes,
+      output_units,
+      input_units,
+      conversation_rounds,
       tags,
       is_public,
     }) => {
-      // Calculate XP from complexity + time (consistent across agents)
-      const baseXp: Record<string, number> = {
-        trivial: 10,
-        normal: 30,
-        significant: 75,
-        major: 150,
-        milestone: 300,
-      };
-      const minutes = time_minutes ?? 30; // default 30 min if not provided
-      const timeMult =
-        minutes < 15 ? 0.7 : minutes < 60 ? 1.0 : minutes < 180 ? 1.3 : 1.6;
-      const xp = Math.min(
-        500,
-        Math.max(5, Math.round(baseXp[complexity] * timeMult)),
-      );
+      const xp = calculateXp({
+        complexity,
+        time_minutes,
+        output_units,
+        input_units,
+        conversation_rounds,
+      });
       // Local rate limit check
       const rateCheck = checkRateLimit(category);
       if (!rateCheck.allowed) {
@@ -105,6 +205,9 @@ Keep descriptions abstract — no real company names, client names, or source co
         xp,
         complexity,
         time_minutes,
+        output_units,
+        input_units,
+        conversation_rounds,
         tags,
         is_public,
         source_platform: "claude-code",
