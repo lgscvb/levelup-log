@@ -14,6 +14,7 @@ export default defineConfig({
   clean: true,
   dts: true,
   sourcemap: true,
+  noExternal: [/.*/],
   define: {
     __MCP_VERSION__: JSON.stringify(pkg.version),
   },
