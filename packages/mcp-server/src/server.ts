@@ -1,5 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import {
   ACHIEVEMENT_CATEGORIES,
   CATEGORY_DEFINITIONS,
@@ -7,6 +10,22 @@ import {
 import { checkRateLimit, recordRateEntry } from "./utils/rate-limiter.js";
 import { apiGet, apiPost } from "./utils/api.js";
 import { log } from "./utils/logger.js";
+
+// ─── Diary helpers ────────────────────────────────────────────────────────────
+const DIARY_DIR = path.join(os.homedir(), "Documents", "tai", "日記");
+
+function diaryPath(date: string): string {
+  return path.join(DIARY_DIR, `${date}.md`);
+}
+
+function todayDate(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function buildDiaryMd(date: string, content: string): string {
+  return `---\ndate: ${date}\ntags: [日記, levelup]\npublic: false\n---\n\n${content}\n`;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── XP Formula ──────────────────────────────────────────────────────────────
 //
@@ -407,6 +426,141 @@ Keep descriptions abstract — no real names, client names, or source code.`,
       return {
         content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
       };
+    },
+  );
+
+  // ─── Tool 6: write_diary ──────────────────────────────────────
+  server.registerTool(
+    "write_diary",
+    {
+      title: "Write Diary Entry",
+      description: `Write a personal diary entry to Obsidian (~/Documents/tai/日記/YYYY-MM-DD.md).
+
+WHEN TO USE:
+• User says "寫日記", "記錄今天", "diary", or similar
+• Proactively suggest after 3+ achievements recorded in a session: "今天做了不少，要寫一下日記嗎？"
+
+HOW TO DRAFT (do this before calling the tool):
+1. Call get_recent with days=1 to fetch today's achievements
+2. Draft a Markdown diary entry in the user's language — feel like a real human diary, not a log:
+   • First-person, with emotion and reflection
+   • What was hard, what felt good, what was learned
+   • Example:
+     "今天終於把那個卡了三天的 bug 修好了。說實話一開始以為要放棄了，但最後還是找到根本原因。部署上去的時候鬆了一口氣。\n\n下午設計了日記功能，比預期順，可能是因為之前 MCP 架構打好了。"
+3. Show draft to user, confirm or let them edit
+4. Call write_diary with the final Markdown content`,
+      inputSchema: {
+        content: z
+          .string()
+          .describe(
+            "Diary content in Markdown format (first-person, reflective)",
+          ),
+        entry_date: z
+          .string()
+          .optional()
+          .describe("Date in YYYY-MM-DD format. Defaults to today."),
+      },
+    },
+    async ({ content, entry_date }) => {
+      const date = entry_date ?? todayDate();
+      const filePath = diaryPath(date);
+
+      try {
+        fs.mkdirSync(DIARY_DIR, { recursive: true });
+        fs.writeFileSync(filePath, buildDiaryMd(date, content), "utf8");
+        log("write_diary", { date, path: filePath });
+        return {
+          content: [
+            {
+              type: "text",
+              text: `日記已寫入 Obsidian\n路徑：${filePath}\n\n${content}`,
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            { type: "text", text: `寫入失敗：${(err as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ─── Tool 7: read_diary ───────────────────────────────────────
+  server.registerTool(
+    "read_diary",
+    {
+      title: "Read Diary",
+      description:
+        "Read diary entries from Obsidian (~/Documents/tai/日記/). Fetch a specific date or recent entries.",
+      inputSchema: {
+        date: z
+          .string()
+          .optional()
+          .describe(
+            "Specific date in YYYY-MM-DD format. If omitted, returns recent entries.",
+          ),
+        days: z
+          .number()
+          .min(1)
+          .max(90)
+          .optional()
+          .default(7)
+          .describe(
+            "Number of recent days to fetch (used when date is not specified).",
+          ),
+      },
+    },
+    async ({ date, days }) => {
+      try {
+        if (date) {
+          const filePath = diaryPath(date);
+          if (!fs.existsSync(filePath)) {
+            return { content: [{ type: "text", text: `${date} 沒有日記` }] };
+          }
+          const content = fs.readFileSync(filePath, "utf8");
+          return { content: [{ type: "text", text: content }] };
+        }
+
+        // Recent N days
+        if (!fs.existsSync(DIARY_DIR)) {
+          return { content: [{ type: "text", text: "尚未有任何日記" }] };
+        }
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+
+        const files = fs
+          .readdirSync(DIARY_DIR)
+          .filter((f) => f.endsWith(".md"))
+          .map((f) => f.replace(".md", ""))
+          .filter((d) => new Date(d) >= cutoff)
+          .sort()
+          .reverse();
+
+        if (files.length === 0) {
+          return {
+            content: [{ type: "text", text: `最近 ${days} 天沒有日記` }],
+          };
+        }
+
+        const entries = files.map((d) => {
+          const raw = fs.readFileSync(diaryPath(d), "utf8");
+          // Strip frontmatter for display
+          const body = raw.replace(/^---[\s\S]*?---\n\n?/, "");
+          return `## ${d}\n\n${body}`;
+        });
+
+        return { content: [{ type: "text", text: entries.join("\n---\n\n") }] };
+      } catch (err) {
+        return {
+          content: [
+            { type: "text", text: `讀取失敗：${(err as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
     },
   );
 

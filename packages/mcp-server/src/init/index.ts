@@ -6,9 +6,13 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { homedir, platform } from "os";
 
+// Injected at build time by tsup define — avoids runtime path resolution issues
+declare const __MCP_VERSION__: string;
+const PINNED_VERSION = __MCP_VERSION__;
+
 const MCP_CONFIG = {
   command: "npx",
-  args: ["-y", "@levelup-log/mcp-server@latest", "serve"],
+  args: ["-y", `@levelup-log/mcp-server@${PINNED_VERSION}`],
 };
 
 /** ChatGPT Desktop supports MCP on macOS (v1.2024.x+). Detect its config path. */

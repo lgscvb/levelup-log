@@ -18,7 +18,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { execSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { CONFIG } from "../utils/config.js";
@@ -492,6 +492,7 @@ async function saveToObsidian(
   streak: StreakResult,
   season: SeasonResult,
   titles: TitleEntry[],
+  version?: VersionCheckResult,
 ) {
   const now = new Date();
   const year = now.getFullYear();
@@ -589,7 +590,11 @@ ${seasonLine}
 ## 🏅 稱號解鎖分布
 
 ${titlesByRarity || "_無稱號資料_"}
-`;
+${
+  version?.checked
+    ? `\n## 📦 版本\n\n${version.upToDate ? `✅ 最新版 ${version.current}` : `⚠️ 有更新：${version.current} → ${version.latest}\n\`\`\`\nnpx @levelup-log/mcp-server@latest init\n\`\`\``}\n`
+    : ""
+}`;
 
   // 建立目錄（若不存在）
   mkdirSync(reportDir, { recursive: true });
@@ -601,7 +606,72 @@ ${titlesByRarity || "_無稱號資料_"}
   );
 }
 
-// ─── Task 7: Google Calendar Event ───────────────────────────────────────────
+// ─── Task 7: Version Check (every 30 days) ────────────────────────────────────
+
+type VersionCheckResult = {
+  current: string;
+  latest: string;
+  upToDate: boolean;
+  checked: boolean; // false = skipped (< 30 days since last check)
+};
+
+const VERSION_CHECK_STATE = join(homedir(), ".levelup", "version-check.json");
+const VERSION_CHECK_INTERVAL_DAYS = 30;
+
+function checkVersionIfNeeded(): VersionCheckResult {
+  // Read current version from package.json (bundled alongside this script)
+  let current = "unknown";
+  try {
+    const pkgPath = join(
+      new URL(".", import.meta.url).pathname,
+      "../../../package.json",
+    );
+    current = JSON.parse(readFileSync(pkgPath, "utf8")).version as string;
+  } catch {
+    /* ignore */
+  }
+
+  // Load last check state
+  let lastChecked: string | null = null;
+  try {
+    lastChecked = JSON.parse(readFileSync(VERSION_CHECK_STATE, "utf8"))
+      .lastChecked as string;
+  } catch {
+    /* first run */
+  }
+
+  // Skip if checked recently
+  if (lastChecked) {
+    const daysSince =
+      (Date.now() - new Date(lastChecked).getTime()) / 86_400_000;
+    if (daysSince < VERSION_CHECK_INTERVAL_DAYS) {
+      return { current, latest: current, upToDate: true, checked: false };
+    }
+  }
+
+  // Query npm
+  let latest = "unknown";
+  try {
+    latest = execSync("npm view @levelup-log/mcp-server version", {
+      encoding: "utf8",
+      timeout: 10_000,
+    }).trim();
+    writeFileSync(
+      VERSION_CHECK_STATE,
+      JSON.stringify({
+        lastChecked: new Date().toISOString(),
+        latestSeen: latest,
+      }),
+      "utf8",
+    );
+  } catch {
+    return { current, latest: "unknown", upToDate: true, checked: false };
+  }
+
+  return { current, latest, upToDate: latest === current, checked: true };
+}
+
+// ─── Task 8: Google Calendar Event ───────────────────────────────────────────
 
 function saveToCalendar(
   stats: StatsResult,
@@ -697,9 +767,17 @@ export async function main() {
   const streak = await streakHealth(db);
   const season = await seasonManagement(db);
   const titles = await titleDistribution(db);
+  const version = checkVersionIfNeeded();
+
+  if (version.checked && !version.upToDate) {
+    section("⚠️  版本更新可用");
+    console.log(`  目前版本：${version.current}`);
+    console.log(`  最新版本：${version.latest}`);
+    console.log(`  執行 npx @levelup-log/mcp-server@latest init 更新`);
+  }
 
   await yearlySnapshotIfNeeded(db);
-  await saveToObsidian(stats, streak, season, titles);
+  await saveToObsidian(stats, streak, season, titles, version);
   saveToCalendar(stats, season, getISOWeek(now), now.getFullYear());
 
   section("✅ Heartbeat 完成");

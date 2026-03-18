@@ -206,6 +206,8 @@ Tool 呼叫 → 檢查 keychain token → 過期？→ refresh token
 
 **優先使用 Sub Agent / Agent Team 平行處理**，能同時跑的工作不要序列執行。
 
+Agent Teams 已在 `~/.claude/settings.json` 啟用（`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`），可直接使用。
+
 ### 適合平行化的典型場景
 
 | 場景 | 平行方式 |
@@ -216,6 +218,7 @@ Tool 呼叫 → 檢查 keychain token → 過期？→ refresh token
 | 多平台 rules 檔案 | 各平台檔案互不相依，同時寫入 |
 | TypeScript 編譯檢查 + lint | 同時跑，不要等一個完成再跑另一個 |
 | 前端多頁面 i18n 補齊 | 各頁面翻譯互相獨立，分派多個 agent |
+| 雙週心跳報告各任務 | weeklyStats / streakHealth / titleDistribution 各自獨立，可平行 |
 
 ### 使用原則
 
@@ -223,6 +226,30 @@ Tool 呼叫 → 檢查 keychain token → 過期？→ refresh token
 2. **Agent 顆粒度**：每個 agent 負責一個邏輯單元（一個檔案 / 一個 function / 一個子系統）
 3. **結果整合**：平行 agent 完成後，主 agent 統一整合並跑 `tsc --noEmit` + `vitest`
 4. **避免衝突**：同一個檔案不要分派給兩個 agent 同時修改
+5. **Team vs Sub Agent**：
+   - **Sub Agent**（`Agent` tool）：適合獨立子任務，各自有獨立 context window
+   - **Agent Team**：適合需要 agent 互相溝通、挑戰彼此結果的場景（研究 + 驗證）
+
+### Agent Skills 2.0（跨平台）
+
+Claude Code 的 skill 系統已升級為可產生獨立 subagent、動態注入 context 的程式化 agent 平台，並跨平台相容：
+
+| 平台 | 支援狀態 |
+|------|---------|
+| Claude Code | ✅ 原生支援（`~/.claude/skills/`） |
+| Cursor | ✅ 支援（`.cursor/rules` + skill 格式） |
+| Antigravity | ✅ 支援 |
+| Codex (OpenAI) | ✅ 支援 |
+| Gemini CLI | ✅ 支援 |
+| Windsurf | ✅ 支援 |
+
+**新功能（2026 Q1）**：
+- `${CLAUDE_SKILL_DIR}` — skill 可引用自己的目錄路徑（相對資源載入）
+- `InstructionsLoaded` hook — skill 載入時觸發自訂初始化邏輯
+- `agent_id` / `agent_type` — subagent 可識別自己的身份與類型
+- Skill 與 Command 統一 — `/levelup` 同時是 skill 也是 command
+
+**LevelUp 專屬 skill**：`~/.claude/skills/levelup.md`，用 `/levelup` 呼叫，顯示成就儀表板 + 啟動教練模式。
 
 ## 程式碼慣例
 
