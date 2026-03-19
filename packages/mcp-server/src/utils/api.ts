@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js';
-import { getValidToken } from '../auth/manager.js';
-import { logError } from './logger.js';
+import { CONFIG } from "./config.js";
+import { getValidToken } from "../auth/manager.js";
+import { logError } from "./logger.js";
 
 interface ApiResponse<T = unknown> {
   data?: T;
@@ -8,7 +8,10 @@ interface ApiResponse<T = unknown> {
   status: number;
 }
 
-export async function apiGet<T = unknown>(path: string, params?: Record<string, string>): Promise<ApiResponse<T>> {
+export async function apiGet<T = unknown>(
+  path: string,
+  params?: Record<string, string>,
+): Promise<ApiResponse<T>> {
   const token = await getValidToken();
   const url = new URL(`${CONFIG.SUPABASE_URL}/functions/v1/${path}`);
   if (params) {
@@ -21,44 +24,53 @@ export async function apiGet<T = unknown>(path: string, params?: Record<string, 
     const res = await fetch(url.toString(), {
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         apikey: CONFIG.SUPABASE_ANON_KEY,
       },
     });
 
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown>;
     if (!res.ok) {
-      return { error: body.error || `HTTP ${res.status}`, status: res.status };
+      return {
+        error: (body.error as string) || `HTTP ${res.status}`,
+        status: res.status,
+      };
     }
     return { data: body as T, status: res.status };
   } catch (error) {
-    logError('API GET error:', error);
+    logError("API GET error:", error);
     return { error: (error as Error).message, status: 0 };
   }
 }
 
-export async function apiPost<T = unknown>(path: string, body: unknown): Promise<ApiResponse<T>> {
+export async function apiPost<T = unknown>(
+  path: string,
+  body: unknown,
+): Promise<ApiResponse<T>> {
   const token = await getValidToken();
   const url = `${CONFIG.SUPABASE_URL}/functions/v1/${path}`;
 
   try {
     const res = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         apikey: CONFIG.SUPABASE_ANON_KEY,
       },
       body: JSON.stringify(body),
     });
 
-    const data = await res.json();
+    const data = (await res.json()) as Record<string, unknown>;
     if (!res.ok) {
-      return { error: data.error || `HTTP ${res.status}`, status: res.status };
+      return {
+        error: (data.error as string) || `HTTP ${res.status}`,
+        status: res.status,
+      };
     }
     return { data: data as T, status: res.status };
   } catch (error) {
-    logError('API POST error:', error);
+    logError("API POST error:", error);
     return { error: (error as Error).message, status: 0 };
   }
 }
