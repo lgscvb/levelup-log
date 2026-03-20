@@ -64,6 +64,7 @@ export function ProfileClient({
 }: Props) {
   const { locale } = useLocale();
   const tr = t(locale).profile;
+  const cmn = t(locale).common;
 
   return (
     <main className="mx-auto max-w-3xl p-6">
@@ -78,7 +79,7 @@ export function ProfileClient({
         )}
         <h1 className="text-3xl font-bold">
           {profile.display_name || profile.username}
-          <span className="ml-2 text-emerald-400">Lv.{ageLevel}</span>
+          <span className="ml-2 text-emerald-400">{cmn.lv}{ageLevel}</span>
         </h1>
         {activeTitle && (
           <p className={`mt-1 text-sm font-medium ${rarityColor(activeTitle.rarity)}`}>
@@ -122,7 +123,9 @@ export function ProfileClient({
               return (
                 <div key={cat} className="flex items-center gap-3">
                   <span className="w-6 text-center">{categoryEmoji[cat] || '\u{1F4CC}'}</span>
-                  <span className="w-20 text-sm text-gray-400">{cat}</span>
+                  <span className="w-20 text-sm text-gray-400">
+                    {cmn.categories[cat as keyof typeof cmn.categories] || cat}
+                  </span>
                   <div className="h-2 flex-1 rounded-full bg-gray-800">
                     <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
                   </div>
@@ -145,7 +148,7 @@ export function ProfileClient({
                   <span className="mr-2">{categoryEmoji[a.category] || '\u{1F4CC}'}</span>
                   <span className="font-medium">{a.title}</span>
                   <span className="ml-2 rounded bg-gray-800 px-2 py-0.5 text-xs text-gray-400">
-                    {a.category}
+                    {cmn.categories[a.category as keyof typeof cmn.categories] || a.category}
                   </span>
                 </div>
                 <span className="text-sm font-bold text-emerald-400">+{a.xp} XP</span>

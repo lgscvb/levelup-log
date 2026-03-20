@@ -39,6 +39,7 @@ type Props = {
 export function DashboardClient({ profile, achievements, activeTitle, ageLevel }: Props) {
   const { locale } = useLocale();
   const tr = t(locale).dashboard;
+  const cmn = t(locale).common;
 
   return (
     <main className="mx-auto max-w-3xl p-6">
@@ -75,8 +76,8 @@ export function DashboardClient({ profile, achievements, activeTitle, ageLevel }
           )}
           <div>
             <h2 className="text-xl font-bold">
-              {profile?.display_name || profile?.username || 'Adventurer'}
-              <span className="ml-2 text-emerald-400">Lv.{ageLevel}</span>
+              {profile?.display_name || profile?.username || cmn.adventurer}
+              <span className="ml-2 text-emerald-400">{cmn.lv}{ageLevel}</span>
             </h2>
             {activeTitle && (
               <span
@@ -136,7 +137,7 @@ export function DashboardClient({ profile, achievements, activeTitle, ageLevel }
                 <div>
                   <span className="font-medium">{a.title}</span>
                   <span className="ml-2 rounded bg-gray-800 px-2 py-0.5 text-xs text-gray-400">
-                    {a.category}
+                    {cmn.categories[a.category as keyof typeof cmn.categories] || a.category}
                   </span>
                 </div>
                 <span className="text-sm font-bold text-emerald-400">
