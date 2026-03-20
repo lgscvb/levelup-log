@@ -166,11 +166,13 @@ Keep descriptions abstract — no real names, client names, or source code.`,
         title: z
           .string()
           .describe(
-            'Game-style achievement title (e.g. "Bug Slayer", "Morning Warrior")',
+            'Game-style achievement title in the conversation\'s language (e.g. EN: "Bug Slayer", ZH: "除錯大師", JA: "バグスレイヤー")',
           ),
         description: z
           .string()
-          .describe("What was accomplished, in abstract terms (no PII)"),
+          .describe(
+            'What was accomplished, in abstract terms (no PII). IMPORTANT: Write in the same language as the current conversation (e.g., if chatting in Chinese, write Chinese; if in English, write English).',
+          ),
         complexity: z
           .enum(["trivial", "normal", "significant", "major", "milestone"])
           .describe(

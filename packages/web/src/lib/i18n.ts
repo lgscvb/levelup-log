@@ -65,6 +65,7 @@ type Translations = {
     recentAchievements: string;
     noAchievements: string;
     noAchievementsHint: string;
+    diary: string;
   };
   settings: {
     title: string;
@@ -76,6 +77,12 @@ type Translations = {
     saving: string;
     saved: string;
     signOut: string;
+  };
+  diary: {
+    title: string;
+    backToDashboard: string;
+    noEntries: string;
+    noEntriesHint: string;
   };
   leaderboard: {
     title: string;
@@ -174,6 +181,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "No achievements yet. Start using the MCP to record your first!",
       noAchievementsHint: "# Install in one command",
+      diary: "Diary",
     },
     settings: {
       title: "Settings",
@@ -185,6 +193,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Saving...",
       saved: "Settings saved!",
       signOut: "Sign Out",
+    },
+    diary: {
+      title: "Diary",
+      backToDashboard: "Back to Dashboard",
+      noEntries: "No diary entries yet.",
+      noEntriesHint: "Use the write_diary MCP tool to start journaling!",
     },
     leaderboard: {
       title: "Leaderboard",
@@ -279,6 +293,7 @@ export const translations: Record<Locale, Translations> = {
       recentAchievements: "最近成就",
       noAchievements: "還沒有成就。開始使用 MCP 記錄你的第一個！",
       noAchievementsHint: "# 一行指令安裝",
+      diary: "日記",
     },
     settings: {
       title: "設定",
@@ -290,6 +305,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "儲存中...",
       saved: "設定已儲存！",
       signOut: "登出",
+    },
+    diary: {
+      title: "日記",
+      backToDashboard: "返回儀表板",
+      noEntries: "還沒有日記。",
+      noEntriesHint: "使用 write_diary MCP 工具開始記錄日記吧！",
     },
     leaderboard: {
       title: "排行榜",
@@ -384,6 +405,7 @@ export const translations: Record<Locale, Translations> = {
       recentAchievements: "最近成就",
       noAchievements: "还没有成就。开始使用 MCP 记录你的第一个！",
       noAchievementsHint: "# 一行命令安装",
+      diary: "日记",
     },
     settings: {
       title: "设置",
@@ -395,6 +417,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "保存中...",
       saved: "设置已保存！",
       signOut: "退出登录",
+    },
+    diary: {
+      title: "日记",
+      backToDashboard: "返回仪表板",
+      noEntries: "还没有日记。",
+      noEntriesHint: "使用 write_diary MCP 工具开始记录日记吧！",
     },
     leaderboard: {
       title: "排行榜",
@@ -491,6 +519,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "まだ実績がありません。MCPを使って最初の実績を記録しよう！",
       noAchievementsHint: "# ワンコマンドでインストール",
+      diary: "日記",
     },
     settings: {
       title: "設定",
@@ -502,6 +531,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "保存中...",
       saved: "設定を保存しました！",
       signOut: "サインアウト",
+    },
+    diary: {
+      title: "日記",
+      backToDashboard: "ダッシュボードに戻る",
+      noEntries: "まだ日記がありません。",
+      noEntriesHint: "write_diary MCP ツールを使って日記を始めましょう！",
     },
     leaderboard: {
       title: "リーダーボード",
@@ -598,6 +633,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "아직 성취가 없습니다. MCP를 사용해 첫 번째 성취를 기록하세요!",
       noAchievementsHint: "# 한 줄 명령어로 설치",
+      diary: "일기",
     },
     settings: {
       title: "설정",
@@ -609,6 +645,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "저장 중...",
       saved: "설정이 저장되었습니다!",
       signOut: "로그아웃",
+    },
+    diary: {
+      title: "일기",
+      backToDashboard: "대시보드로 돌아가기",
+      noEntries: "아직 일기가 없습니다.",
+      noEntriesHint: "write_diary MCP 도구로 일기를 시작해보세요!",
     },
     leaderboard: {
       title: "리더보드",
@@ -704,6 +746,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Aún no hay logros. ¡Empieza a usar el MCP para registrar el primero!",
       noAchievementsHint: "# Instalar en un comando",
+      diary: "Diario",
     },
     settings: {
       title: "Configuración",
@@ -715,6 +758,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Guardando...",
       saved: "¡Configuración guardada!",
       signOut: "Cerrar sesión",
+    },
+    diary: {
+      title: "Diario",
+      backToDashboard: "Volver al panel",
+      noEntries: "Aún no hay entradas en el diario.",
+      noEntriesHint: "¡Usa la herramienta write_diary MCP para empezar a escribir!",
     },
     leaderboard: {
       title: "Clasificación",
@@ -811,6 +860,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Nenhuma conquista ainda. Comece a usar o MCP para registrar a primeira!",
       noAchievementsHint: "# Instalar com um comando",
+      diary: "Diário",
     },
     settings: {
       title: "Configurações",
@@ -822,6 +872,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Salvando...",
       saved: "Configurações salvas!",
       signOut: "Sair",
+    },
+    diary: {
+      title: "Diário",
+      backToDashboard: "Voltar ao painel",
+      noEntries: "Ainda não há entradas no diário.",
+      noEntriesHint: "Use a ferramenta write_diary MCP para começar a escrever!",
     },
     leaderboard: {
       title: "Classificação",
@@ -918,6 +974,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Pas encore de succès. Commencez à utiliser le MCP pour enregistrer le premier !",
       noAchievementsHint: "# Installer en une commande",
+      diary: "Journal",
     },
     settings: {
       title: "Paramètres",
@@ -929,6 +986,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Enregistrement...",
       saved: "Paramètres sauvegardés !",
       signOut: "Se déconnecter",
+    },
+    diary: {
+      title: "Journal",
+      backToDashboard: "Retour au tableau de bord",
+      noEntries: "Pas encore d'entrées dans le journal.",
+      noEntriesHint: "Utilisez l'outil write_diary MCP pour commencer !",
     },
     leaderboard: {
       title: "Classement",
@@ -1026,6 +1089,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Noch keine Errungenschaften. Starte den MCP, um die erste aufzuzeichnen!",
       noAchievementsHint: "# In einem Befehl installieren",
+      diary: "Tagebuch",
     },
     settings: {
       title: "Einstellungen",
@@ -1037,6 +1101,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Speichern...",
       saved: "Einstellungen gespeichert!",
       signOut: "Abmelden",
+    },
+    diary: {
+      title: "Tagebuch",
+      backToDashboard: "Zurück zum Dashboard",
+      noEntries: "Noch keine Tagebucheinträge.",
+      noEntriesHint: "Verwende das write_diary MCP-Tool, um mit dem Journaling zu beginnen!",
     },
     leaderboard: {
       title: "Rangliste",
@@ -1133,6 +1203,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Ancora nessun traguardo. Inizia a usare il MCP per registrare il primo!",
       noAchievementsHint: "# Installa con un comando",
+      diary: "Diario",
     },
     settings: {
       title: "Impostazioni",
@@ -1144,6 +1215,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Salvataggio...",
       saved: "Impostazioni salvate!",
       signOut: "Esci",
+    },
+    diary: {
+      title: "Diario",
+      backToDashboard: "Torna alla dashboard",
+      noEntries: "Nessuna voce nel diario.",
+      noEntriesHint: "Usa lo strumento write_diary MCP per iniziare!",
     },
     leaderboard: {
       title: "Classifica",
@@ -1240,6 +1317,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Пока нет достижений. Начни использовать MCP, чтобы записать первое!",
       noAchievementsHint: "# Установить одной командой",
+      diary: "Дневник",
     },
     settings: {
       title: "Настройки",
@@ -1251,6 +1329,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Сохранение...",
       saved: "Настройки сохранены!",
       signOut: "Выйти",
+    },
+    diary: {
+      title: "Дневник",
+      backToDashboard: "Назад к панели",
+      noEntries: "Записей в дневнике пока нет.",
+      noEntriesHint: "Используйте инструмент write_diary MCP, чтобы начать вести дневник!",
     },
     leaderboard: {
       title: "Рейтинг",
@@ -1346,6 +1430,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "لا توجد إنجازات بعد. ابدأ باستخدام MCP لتسجيل أول إنجاز!",
       noAchievementsHint: "# التثبيت بأمر واحد",
+      diary: "اليوميات",
     },
     settings: {
       title: "الإعدادات",
@@ -1357,6 +1442,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "جارٍ الحفظ...",
       saved: "تم حفظ الإعدادات!",
       signOut: "تسجيل الخروج",
+    },
+    diary: {
+      title: "اليوميات",
+      backToDashboard: "العودة إلى لوحة التحكم",
+      noEntries: "لا توجد إدخالات في اليوميات بعد.",
+      noEntriesHint: "استخدم أداة write_diary MCP لبدء التدوين!",
     },
     leaderboard: {
       title: "لوحة المتصدرين",
@@ -1453,6 +1544,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Nog geen prestaties. Begin de MCP te gebruiken om de eerste te registreren!",
       noAchievementsHint: "# Installeer met één commando",
+      diary: "Dagboek",
     },
     settings: {
       title: "Instellingen",
@@ -1464,6 +1556,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Opslaan...",
       saved: "Instellingen opgeslagen!",
       signOut: "Uitloggen",
+    },
+    diary: {
+      title: "Dagboek",
+      backToDashboard: "Terug naar dashboard",
+      noEntries: "Nog geen dagboeknotities.",
+      noEntriesHint: "Gebruik de write_diary MCP-tool om te beginnen!",
     },
     leaderboard: {
       title: "Ranglijst",
@@ -1559,6 +1657,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Henüz başarı yok. İlkini kaydetmek için MCP'yi kullanmaya başla!",
       noAchievementsHint: "# Tek komutla kur",
+      diary: "Günlük",
     },
     settings: {
       title: "Ayarlar",
@@ -1570,6 +1669,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Kaydediliyor...",
       saved: "Ayarlar kaydedildi!",
       signOut: "Çıkış Yap",
+    },
+    diary: {
+      title: "Günlük",
+      backToDashboard: "Panele dön",
+      noEntries: "Henüz günlük girişi yok.",
+      noEntriesHint: "Günlük tutmaya başlamak için write_diary MCP aracını kullanın!",
     },
     leaderboard: {
       title: "Lider Tablosu",
@@ -1667,6 +1772,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Chưa có thành tích. Bắt đầu dùng MCP để ghi lại thành tích đầu tiên!",
       noAchievementsHint: "# Cài đặt bằng một lệnh",
+      diary: "Nhật ký",
     },
     settings: {
       title: "Cài đặt",
@@ -1678,6 +1784,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Đang lưu...",
       saved: "Đã lưu cài đặt!",
       signOut: "Đăng xuất",
+    },
+    diary: {
+      title: "Nhật ký",
+      backToDashboard: "Quay lại bảng điều khiển",
+      noEntries: "Chưa có nhật ký nào.",
+      noEntriesHint: "Dùng công cụ write_diary MCP để bắt đầu viết nhật ký!",
     },
     leaderboard: {
       title: "Bảng xếp hạng",
@@ -1774,6 +1886,7 @@ export const translations: Record<Locale, Translations> = {
       noAchievements:
         "Belum ada pencapaian. Mulai gunakan MCP untuk mencatat yang pertama!",
       noAchievementsHint: "# Instal dengan satu perintah",
+      diary: "Jurnal",
     },
     settings: {
       title: "Pengaturan",
@@ -1785,6 +1898,12 @@ export const translations: Record<Locale, Translations> = {
       saving: "Menyimpan...",
       saved: "Pengaturan tersimpan!",
       signOut: "Keluar",
+    },
+    diary: {
+      title: "Jurnal",
+      backToDashboard: "Kembali ke dasbor",
+      noEntries: "Belum ada catatan jurnal.",
+      noEntriesHint: "Gunakan alat write_diary MCP untuk mulai menulis jurnal!",
     },
     leaderboard: {
       title: "Papan Peringkat",

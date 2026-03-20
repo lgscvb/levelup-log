@@ -56,6 +56,12 @@ export function DashboardClient({ profile, achievements, activeTitle, ageLevel }
             </Link>
           )}
           <Link
+            href="/dashboard/diary"
+            className="text-sm text-emerald-400 hover:underline"
+          >
+            {tr.diary}
+          </Link>
+          <Link
             href="/dashboard/settings"
             className="text-sm text-gray-400 hover:text-white"
           >
