@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
     // Parse body
     const body = await req.json();
-    const { content, entry_date, achievement_ids } = body;
+    const { content, entry_date, achievement_ids, is_public } = body;
 
     // Validate required fields
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
           entry_date: resolvedDate,
           content: content.trim(),
           achievement_ids: achievement_ids ?? [],
+          is_public: is_public === true ? true : false,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,entry_date' }

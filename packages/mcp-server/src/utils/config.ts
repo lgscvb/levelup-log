@@ -1,3 +1,6 @@
+import path from "node:path";
+import os from "node:os";
+
 export const CONFIG = {
   SUPABASE_URL:
     process.env.LEVELUP_SUPABASE_URL ||
@@ -7,6 +10,7 @@ export const CONFIG = {
     "sb_publishable_RilZivOWm3FIs6ueIA67Fw_07ZKjoEY",
   AUTH_PORT: parseInt(process.env.LEVELUP_AUTH_PORT || "19876", 10),
   DEBUG: process.env.LEVELUP_DEBUG === "true",
+  DIARY_DIR: process.env.LEVELUP_DIARY_DIR || path.join(os.homedir(), ".levelup", "diary"),
 } as const;
 
 // ─── Category Definitions ────────────────────────────────────────────────────

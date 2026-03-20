@@ -1,18 +1,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 import {
   ACHIEVEMENT_CATEGORIES,
   CATEGORY_DEFINITIONS,
+  CONFIG,
 } from "./utils/config.js";
 import { checkRateLimit, recordRateEntry } from "./utils/rate-limiter.js";
 import { apiGet, apiPost } from "./utils/api.js";
 import { log } from "./utils/logger.js";
 
 // ─── Diary helpers ────────────────────────────────────────────────────────────
-const DIARY_DIR = path.join(os.homedir(), "Documents", "tai", "日記");
+const DIARY_DIR = CONFIG.DIARY_DIR;
 
 function diaryPath(date: string): string {
   return path.join(DIARY_DIR, `${date}.md`);
@@ -434,7 +434,7 @@ Keep descriptions abstract — no real names, client names, or source code.`,
     "write_diary",
     {
       title: "Write Diary Entry",
-      description: `Write a personal diary entry to Obsidian (~/Documents/tai/日記/YYYY-MM-DD.md).
+      description: `Write a personal diary entry to the local diary directory and sync to cloud.
 
 WHEN TO USE:
 • User says "寫日記", "記錄今天", "diary", or similar
@@ -446,7 +446,7 @@ HOW TO DRAFT (do this before calling the tool):
    • First-person, with emotion and reflection
    • What was hard, what felt good, what was learned
    • Example:
-     "今天終於把那個卡了三天的 bug 修好了。說實話一開始以為要放棄了，但最後還是找到根本原因。部署上去的時候鬆了一口氣。\n\n下午設計了日記功能，比預期順，可能是因為之前 MCP 架構打好了。"
+     "今天終於把那個卡了三天的 bug 修好了。說實話一開始以為要放棄了，但最後還是找到根本原因。部署上去的時候鬆了一口氣。\\n\\n下午設計了日記功能，比預期順，可能是因為之前 MCP 架構打好了。"
 3. Show draft to user, confirm or let them edit
 4. Call write_diary with the final Markdown content`,
       inputSchema: {
@@ -466,14 +466,33 @@ HOW TO DRAFT (do this before calling the tool):
       const filePath = diaryPath(date);
 
       try {
+        // 本地寫入
         fs.mkdirSync(DIARY_DIR, { recursive: true });
         fs.writeFileSync(filePath, buildDiaryMd(date, content), "utf8");
         log("write_diary", { date, path: filePath });
+
+        // 雲端同步（不阻塞，失敗只警告）
+        let cloudStatus = "";
+        try {
+          const cloudResult = await apiPost("write-diary", {
+            entry_date: date,
+            content,
+            is_public: false,
+          });
+          if (cloudResult.error) {
+            cloudStatus = `\n⚠️ 雲端同步失敗: ${cloudResult.error}`;
+          } else {
+            cloudStatus = "\n☁️ 已同步到雲端";
+          }
+        } catch (err) {
+          cloudStatus = `\n⚠️ 雲端同步失敗: ${(err as Error).message}`;
+        }
+
         return {
           content: [
             {
               type: "text",
-              text: `日記已寫入 Obsidian\n路徑：${filePath}\n\n${content}`,
+              text: `日記已寫入\n路徑：${filePath}${cloudStatus}\n\n${content}`,
             },
           ],
         };
@@ -494,7 +513,7 @@ HOW TO DRAFT (do this before calling the tool):
     {
       title: "Read Diary",
       description:
-        "Read diary entries from Obsidian (~/Documents/tai/日記/). Fetch a specific date or recent entries.",
+        "Read diary entries. Tries cloud first, falls back to local files.",
       inputSchema: {
         date: z
           .string()
@@ -516,15 +535,58 @@ HOW TO DRAFT (do this before calling the tool):
     async ({ date, days }) => {
       try {
         if (date) {
+          // ── 單日查詢 ──────────────────────────────────────────────
+
+          // 先嘗試雲端
+          try {
+            const cloudResult = await apiGet("get-diary", { date });
+            if (!cloudResult.error && cloudResult.data) {
+              const entry = cloudResult.data as { content: string; entry_date: string; updated_at: string };
+              if (entry.content) {
+                return {
+                  content: [{
+                    type: "text",
+                    text: `📅 ${entry.entry_date}（☁️ 雲端）\n\n${entry.content}`,
+                  }],
+                };
+              }
+            }
+          } catch {
+            // fallback to local
+          }
+
+          // 本地 fallback
           const filePath = diaryPath(date);
           if (!fs.existsSync(filePath)) {
             return { content: [{ type: "text", text: `${date} 沒有日記` }] };
           }
-          const content = fs.readFileSync(filePath, "utf8");
-          return { content: [{ type: "text", text: content }] };
+          const raw = fs.readFileSync(filePath, "utf8");
+          return {
+            content: [{ type: "text", text: `📅 ${date}（📁 本地）\n\n${raw}` }],
+          };
         }
 
-        // Recent N days
+        // ── 多日查詢 ──────────────────────────────────────────────
+
+        // 先嘗試雲端
+        try {
+          const cloudResult = await apiGet("get-diary", { days: String(days) });
+          if (!cloudResult.error && cloudResult.data) {
+            const data = cloudResult.data as { entries?: Array<{ entry_date: string; content: string }> };
+            if (data.entries && data.entries.length > 0) {
+              const text = data.entries
+                .map((e) => `📅 ${e.entry_date}\n\n${e.content}`)
+                .join("\n\n---\n\n");
+              return {
+                content: [{ type: "text", text: `☁️ 最近 ${days} 天的日記\n\n${text}` }],
+              };
+            }
+          }
+        } catch {
+          // fallback to local
+        }
+
+        // 本地 fallback
         if (!fs.existsSync(DIARY_DIR)) {
           return { content: [{ type: "text", text: "尚未有任何日記" }] };
         }
@@ -552,7 +614,7 @@ HOW TO DRAFT (do this before calling the tool):
           return `## ${d}\n\n${body}`;
         });
 
-        return { content: [{ type: "text", text: entries.join("\n---\n\n") }] };
+        return { content: [{ type: "text", text: `📁 本地日記\n\n${entries.join("\n---\n\n")}` }] };
       } catch (err) {
         return {
           content: [
