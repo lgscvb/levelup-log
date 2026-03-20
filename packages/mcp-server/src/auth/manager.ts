@@ -1,9 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
-import { loadTokens, saveTokens, clearTokens } from './keychain.js';
-import { startOAuthCallbackServer } from './oauth-server.js';
-import { generateCodeVerifier, generateCodeChallenge } from './pkce.js';
-import { CONFIG } from '../utils/config.js';
-import { log, logError } from '../utils/logger.js';
+import { createClient } from "@supabase/supabase-js";
+import { loadTokens, saveTokens, clearTokens } from "./keychain.js";
+import { startOAuthCallbackServer } from "./oauth-server.js";
+import { generateCodeVerifier, generateCodeChallenge } from "./pkce.js";
+import { CONFIG } from "../utils/config.js";
+import { log, logError } from "../utils/logger.js";
 
 let cachedAccessToken: string | null = null;
 let tokenExpiresAt: number = 0;
@@ -35,7 +35,7 @@ export async function getValidToken(): Promise<string> {
         const refreshed = await refreshToken(stored.refresh_token);
         if (refreshed) return refreshed;
       } catch (error) {
-        logError('Token refresh failed:', error);
+        logError("Token refresh failed:", error);
       }
     }
   }
@@ -51,7 +51,7 @@ async function refreshToken(refreshTokenValue: string): Promise<string | null> {
   });
 
   if (error || !data.session) {
-    logError('Refresh failed:', error?.message);
+    logError("Refresh failed:", error?.message);
     return null;
   }
 
@@ -65,14 +65,14 @@ async function refreshToken(refreshTokenValue: string): Promise<string | null> {
     expires_at: expiresAt,
   });
 
-  log('Token refreshed successfully');
+  log("Token refreshed successfully");
   return data.session.access_token;
 }
 
 async function login(): Promise<string> {
   if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
     throw new Error(
-      'LevelUp.log is not configured. Run `npx @levelup-log/mcp-server init` to set up.'
+      "LevelUp.log is not configured. Run `npx @levelup-log/mcp-server init` to set up.",
     );
   }
 
@@ -80,30 +80,32 @@ async function login(): Promise<string> {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
 
-  // Start callback server before opening browser
-  const callbackPromise = startOAuthCallbackServer();
+  // Start callback server before opening browser (pass codeVerifier for PKCE exchange)
+  const callbackPromise = startOAuthCallbackServer(codeVerifier);
 
   const redirectTo = `http://127.0.0.1:${CONFIG.AUTH_PORT}/callback`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
+    provider: "google",
     options: {
       redirectTo,
       queryParams: {
         code_challenge: codeChallenge,
-        code_challenge_method: 'S256',
+        code_challenge_method: "S256",
       },
     },
   });
 
   if (error || !data.url) {
-    throw new Error(`Failed to initiate OAuth: ${error?.message ?? 'No URL returned'}`);
+    throw new Error(
+      `Failed to initiate OAuth: ${error?.message ?? "No URL returned"}`,
+    );
   }
 
   // Open browser
-  const open = await import('open');
+  const open = await import("open");
   await open.default(data.url);
-  console.error('Opening browser for Google login...');
+  console.error("Opening browser for Google login...");
 
   // Wait for callback
   const result = await callbackPromise;
@@ -118,7 +120,7 @@ async function login(): Promise<string> {
     expires_at: expiresAt,
   });
 
-  log('Login successful');
+  log("Login successful");
   return result.access_token;
 }
 
@@ -131,5 +133,5 @@ export function logout(): void {
   cachedAccessToken = null;
   tokenExpiresAt = 0;
   clearTokens();
-  log('Logged out');
+  log("Logged out");
 }
