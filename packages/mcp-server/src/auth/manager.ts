@@ -85,14 +85,21 @@ async function login(): Promise<string> {
 
   const redirectTo = `http://127.0.0.1:${CONFIG.AUTH_PORT}/callback`;
 
+  const queryParams: Record<string, string> = {
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
+  };
+
+  // Pin to a specific Google account to prevent cross-account drift
+  if (CONFIG.GOOGLE_EMAIL) {
+    queryParams.login_hint = CONFIG.GOOGLE_EMAIL;
+  }
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo,
-      queryParams: {
-        code_challenge: codeChallenge,
-        code_challenge_method: "S256",
-      },
+      queryParams,
     },
   });
 

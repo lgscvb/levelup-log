@@ -17,6 +17,6 @@ additional_redirect_urls = ["http://localhost:3000/**", "http://localhost:19876/
 
 [auth.external.google]
 enabled = true
-client_id = "743652001579-pl398olnbg3ppau5t8u3g5uo6s5f9f53.apps.googleusercontent.com"
+client_id = "68105588420-0lptan55qg7gt85u56qo2rtkv04rfd2m.apps.googleusercontent.com"
 secret = "env(GOOGLE_CLIENT_SECRET)"
 redirect_uri = "http://localhost:54321/auth/v1/callback"

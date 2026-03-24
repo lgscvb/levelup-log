@@ -10,7 +10,11 @@ export const CONFIG = {
     "sb_publishable_RilZivOWm3FIs6ueIA67Fw_07ZKjoEY",
   AUTH_PORT: parseInt(process.env.LEVELUP_AUTH_PORT || "19876", 10),
   DEBUG: process.env.LEVELUP_DEBUG === "true",
-  DIARY_DIR: process.env.LEVELUP_DIARY_DIR || path.join(os.homedir(), ".levelup", "diary"),
+  DIARY_DIR:
+    process.env.LEVELUP_DIARY_DIR ||
+    path.join(os.homedir(), ".levelup", "diary"),
+  /** Google email for OAuth login_hint — prevents accidental login to wrong account */
+  GOOGLE_EMAIL: process.env.LEVELUP_GOOGLE_EMAIL || "",
 } as const;
 
 // ─── Category Definitions ────────────────────────────────────────────────────
@@ -24,12 +28,12 @@ export const CONFIG = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type CategoryDef = {
-  label: string;       // Display name
-  emoji: string;       // Visual identifier
+  label: string; // Display name
+  emoji: string; // Visual identifier
   description: string; // What this category covers
   output_unit: string; // What 1 output_unit means for this category
-  input_unit: string;  // What 1 input_unit means for this category
-  xp_weight: number;   // Final XP multiplier (applied after base + bonuses)
+  input_unit: string; // What 1 input_unit means for this category
+  xp_weight: number; // Final XP multiplier (applied after base + bonuses)
 };
 
 export const CATEGORY_DEFINITIONS = {

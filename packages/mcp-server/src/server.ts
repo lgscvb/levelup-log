@@ -10,6 +10,7 @@ import {
 import { checkRateLimit, recordRateEntry } from "./utils/rate-limiter.js";
 import { apiGet, apiPost } from "./utils/api.js";
 import { log } from "./utils/logger.js";
+import { sanitizeForPublic } from "./utils/privacy.js";
 
 // ─── Diary helpers ────────────────────────────────────────────────────────────
 const DIARY_DIR = CONFIG.DIARY_DIR;
@@ -171,7 +172,7 @@ Keep descriptions abstract — no real names, client names, or source code.`,
         description: z
           .string()
           .describe(
-            'What was accomplished, in abstract terms (no PII). IMPORTANT: Write in the same language as the current conversation (e.g., if chatting in Chinese, write Chinese; if in English, write English).',
+            "What was accomplished, in abstract terms (no PII). IMPORTANT: Write in the same language as the current conversation (e.g., if chatting in Chinese, write Chinese; if in English, write English).",
           ),
         complexity: z
           .enum(["trivial", "normal", "significant", "major", "milestone"])
@@ -248,11 +249,14 @@ Keep descriptions abstract — no real names, client names, or source code.`,
         };
       }
 
+      // ── Forced privacy sanitization (runs before upload, not optional) ──
+      const sanitized = sanitizeForPublic(title, description);
+
       // XP is calculated server-side — send raw params only
       const result = await apiPost("record-achievement", {
         category,
-        title,
-        description,
+        title: sanitized.title,
+        description: sanitized.description,
         complexity,
         time_minutes,
         output_units,
@@ -543,13 +547,19 @@ HOW TO DRAFT (do this before calling the tool):
           try {
             const cloudResult = await apiGet("get-diary", { date });
             if (!cloudResult.error && cloudResult.data) {
-              const entry = cloudResult.data as { content: string; entry_date: string; updated_at: string };
+              const entry = cloudResult.data as {
+                content: string;
+                entry_date: string;
+                updated_at: string;
+              };
               if (entry.content) {
                 return {
-                  content: [{
-                    type: "text",
-                    text: `📅 ${entry.entry_date}（☁️ 雲端）\n\n${entry.content}`,
-                  }],
+                  content: [
+                    {
+                      type: "text",
+                      text: `📅 ${entry.entry_date}（☁️ 雲端）\n\n${entry.content}`,
+                    },
+                  ],
                 };
               }
             }
@@ -564,7 +574,9 @@ HOW TO DRAFT (do this before calling the tool):
           }
           const raw = fs.readFileSync(filePath, "utf8");
           return {
-            content: [{ type: "text", text: `📅 ${date}（📁 本地）\n\n${raw}` }],
+            content: [
+              { type: "text", text: `📅 ${date}（📁 本地）\n\n${raw}` },
+            ],
           };
         }
 
@@ -574,13 +586,17 @@ HOW TO DRAFT (do this before calling the tool):
         try {
           const cloudResult = await apiGet("get-diary", { days: String(days) });
           if (!cloudResult.error && cloudResult.data) {
-            const data = cloudResult.data as { entries?: Array<{ entry_date: string; content: string }> };
+            const data = cloudResult.data as {
+              entries?: Array<{ entry_date: string; content: string }>;
+            };
             if (data.entries && data.entries.length > 0) {
               const text = data.entries
                 .map((e) => `📅 ${e.entry_date}\n\n${e.content}`)
                 .join("\n\n---\n\n");
               return {
-                content: [{ type: "text", text: `☁️ 最近 ${days} 天的日記\n\n${text}` }],
+                content: [
+                  { type: "text", text: `☁️ 最近 ${days} 天的日記\n\n${text}` },
+                ],
               };
             }
           }
@@ -616,7 +632,14 @@ HOW TO DRAFT (do this before calling the tool):
           return `## ${d}\n\n${body}`;
         });
 
-        return { content: [{ type: "text", text: `📁 本地日記\n\n${entries.join("\n---\n\n")}` }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `📁 本地日記\n\n${entries.join("\n---\n\n")}`,
+            },
+          ],
+        };
       } catch (err) {
         return {
           content: [
