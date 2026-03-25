@@ -1,7 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { loadTokens, saveTokens, clearTokens } from "./keychain.js";
 import { startOAuthCallbackServer } from "./oauth-server.js";
-import { generateCodeVerifier, generateCodeChallenge } from "./pkce.js";
 import { CONFIG } from "../utils/config.js";
 import { log, logError } from "../utils/logger.js";
 
@@ -76,21 +75,34 @@ async function login(): Promise<string> {
     );
   }
 
-  const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-  const codeVerifier = generateCodeVerifier();
-  const codeChallenge = generateCodeChallenge(codeVerifier);
+  // Create a client with native PKCE flow and in-memory storage for this login session.
+  // The client automatically generates code_verifier/code_challenge and stores
+  // the verifier in memoryStorage for later use by exchangeCodeForSession.
+  const memoryStorage: Record<string, string> = {};
+  const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+    auth: {
+      flowType: "pkce",
+      storage: {
+        getItem: (key: string) => memoryStorage[key] ?? null,
+        setItem: (key: string, value: string) => {
+          memoryStorage[key] = value;
+        },
+        removeItem: (key: string) => {
+          delete memoryStorage[key];
+        },
+      },
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
 
-  // Start callback server before opening browser (pass codeVerifier for PKCE exchange)
-  const callbackPromise = startOAuthCallbackServer(codeVerifier);
+  // Start callback server before opening browser (pass supabase client for PKCE exchange)
+  const callbackPromise = startOAuthCallbackServer(supabase);
 
   const redirectTo = `http://127.0.0.1:${CONFIG.AUTH_PORT}/callback`;
 
-  const queryParams: Record<string, string> = {
-    code_challenge: codeChallenge,
-    code_challenge_method: "S256",
-  };
-
   // Pin to a specific Google account to prevent cross-account drift
+  const queryParams: Record<string, string> = {};
   if (CONFIG.GOOGLE_EMAIL) {
     queryParams.login_hint = CONFIG.GOOGLE_EMAIL;
   }
@@ -99,7 +111,7 @@ async function login(): Promise<string> {
     provider: "google",
     options: {
       redirectTo,
-      queryParams,
+      ...(Object.keys(queryParams).length > 0 && { queryParams }),
     },
   });
 

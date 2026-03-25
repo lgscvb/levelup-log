@@ -5,6 +5,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import { URL } from "node:url";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { CONFIG } from "../utils/config.js";
 import { log, logError } from "../utils/logger.js";
 
@@ -15,50 +16,12 @@ interface OAuthResult {
 }
 
 /**
- * Exchange a PKCE authorization code for tokens via Supabase GoTrue.
- */
-async function exchangeCodeForTokens(
-  code: string,
-  codeVerifier: string,
-): Promise<OAuthResult> {
-  const response = await fetch(
-    `${CONFIG.SUPABASE_URL}/auth/v1/token?grant_type=pkce`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: CONFIG.SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        auth_code: code,
-        code_verifier: codeVerifier,
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Token exchange failed (${response.status}): ${body}`);
-  }
-
-  const data = await response.json();
-  if (!data.access_token || !data.refresh_token) {
-    throw new Error("Token exchange response missing tokens");
-  }
-
-  return {
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    expires_in: data.expires_in ?? 3600,
-  };
-}
-
-/**
  * Start a temporary localhost HTTP server to receive the OAuth callback.
- * Handles both PKCE flow (?code=xxx) and implicit flow (#access_token=xxx).
+ * Uses Supabase client's native PKCE flow via exchangeCodeForSession.
+ * Also handles implicit flow (#access_token=xxx) as fallback.
  */
 export function startOAuthCallbackServer(
-  codeVerifier: string,
+  supabase: SupabaseClient,
 ): Promise<OAuthResult> {
   return new Promise((resolve, reject) => {
     const port = CONFIG.AUTH_PORT;
@@ -85,14 +48,46 @@ export function startOAuthCallbackServer(
 
     server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
       const url = new URL(req.url || "/", `http://localhost:${port}`);
+      log(`Callback received: ${url.pathname}${url.search}`);
 
       if (url.pathname === "/callback") {
+        // Check for error from GoTrue first
+        const errorParam = url.searchParams.get("error");
+        const errorDescription =
+          url.searchParams.get("error_description") ||
+          url.searchParams.get("error_code");
+        if (errorParam) {
+          const msg = errorDescription
+            ? `${errorParam}: ${errorDescription}`
+            : errorParam;
+          logError("OAuth error from provider:", msg);
+          res.writeHead(200, { "Content-Type": "text/html" });
+          res.end(`
+            <html>
+              <body style="font-family: system-ui; text-align: center; padding: 50px; background: #0a0a0a; color: #e5e5e5;">
+                <h1>LevelUp.log</h1>
+                <p style="color: #ef4444; font-size: 1.5em;">Login failed</p>
+                <p>${msg}</p>
+              </body>
+            </html>
+          `);
+          fail(new Error(`OAuth error: ${msg}`));
+          return;
+        }
+
         // PKCE flow: Supabase redirects with ?code=xxx
         const code = url.searchParams.get("code");
         if (code) {
           try {
-            log("Received PKCE code, exchanging for tokens...");
-            const result = await exchangeCodeForTokens(code, codeVerifier);
+            log("Received PKCE code, exchanging for session...");
+            const { data, error } =
+              await supabase.auth.exchangeCodeForSession(code);
+
+            if (error || !data.session) {
+              throw new Error(
+                error?.message || "No session returned from code exchange",
+              );
+            }
 
             res.writeHead(200, { "Content-Type": "text/html" });
             res.end(`
@@ -104,7 +99,11 @@ export function startOAuthCallbackServer(
                 </body>
               </html>
             `);
-            succeed(result);
+            succeed({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token ?? "",
+              expires_in: data.session.expires_in ?? 3600,
+            });
           } catch (err) {
             logError("PKCE token exchange failed:", err);
             res.writeHead(200, { "Content-Type": "text/html" });
@@ -150,11 +149,16 @@ export function startOAuthCallbackServer(
             <html>
               <body>
                 <script>
-                  const hash = window.location.hash.substring(1);
+                  var hash = window.location.hash.substring(1);
                   if (hash) {
                     window.location.href = '/callback?' + hash;
                   } else {
-                    document.body.innerHTML = '<p style="font-family: system-ui; text-align: center; padding: 50px;">Login failed. No tokens received.</p>';
+                    document.body.innerHTML = '<div style="font-family: system-ui; text-align: center; padding: 50px; background: #0a0a0a; color: #e5e5e5;">' +
+                      '<h1>LevelUp.log</h1>' +
+                      '<p style="color: #ef4444; font-size: 1.5em;">Login failed</p>' +
+                      '<p>No tokens received. Please check Supabase redirect URL settings.</p>' +
+                      '<p style="color: #888; font-size: 0.9em;">Expected redirect URL: ' + window.location.origin + '/callback</p>' +
+                      '</div>';
                   }
                 </script>
               </body>
