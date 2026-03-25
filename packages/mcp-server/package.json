@@ -1,6 +1,6 @@
 {
   "name": "@levelup-log/mcp-server",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "MCP Server that turns your daily tasks into game-like achievements",
   "type": "module",
   "bin": {
