@@ -442,15 +442,21 @@ Keep descriptions abstract — no real names, client names, or source code.`,
       title: "Write Diary Entry",
       description: `Write a personal diary entry to the local diary directory and sync to cloud.
 
-WHEN TO USE:
+WHEN TO USE (proactively trigger on ANY of these):
 • User says "寫日記", "記錄今天", "diary", or similar
-• Proactively suggest after 3+ achievements recorded in a session: "今天做了不少，要寫一下日記嗎？"
+• After recording 3+ achievements in this session → ask: "今天做了不少，要寫一下日記嗎？"
+• Session is wrapping up (user says bye/thanks/結束) AND achievements were recorded today → ask: "要順便寫今天的日記嗎？"
+• It is evening (after 6 PM) AND you notice today has no diary yet → suggest writing one
+• After completing a major or milestone-level task → suggest a diary entry
+
+IMPORTANT: Check get_recent(days=1) first. If today already has a diary entry, do NOT suggest again.
 
 HOW TO DRAFT (do this before calling the tool):
 1. Call get_recent with days=1 to fetch today's achievements
 2. Draft a Markdown diary entry in the user's language — feel like a real human diary, not a log:
    • First-person, with emotion and reflection
    • What was hard, what felt good, what was learned
+   • Keep it concise (3-8 paragraphs), not an exhaustive list
    • Example:
      "今天終於把那個卡了三天的 bug 修好了。說實話一開始以為要放棄了，但最後還是找到根本原因。部署上去的時候鬆了一口氣。\\n\\n下午設計了日記功能，比預期順，可能是因為之前 MCP 架構打好了。"
 3. Show draft to user, confirm or let them edit

@@ -302,3 +302,29 @@ MVP 期間全功能免費。Pro 付費架構已預留但暫不啟用：
 - `profiles.stripe_customer_id` 欄位存在
 - `profiles.month_xp_used` 欄位存在
 - Edge Function 中 `ENABLE_PRO_LIMITS=false`
+
+
+---
+
+## Git 敏感資訊防護規則（強制）
+
+### 絕對禁止提交
+- `.env*`（除了 `.env.example`）、`.env.supabase`、`.env.db`
+- 含真實值的 `POSTGRES_PASSWORD`、`DATABASE_URL`、`DB_PASSWORD`
+- API 金鑰（`sk-*`、`OPENAI_API_KEY`、`ANTHROPIC_API_KEY`、`STRIPE_SECRET`、`LINE_CHANNEL_SECRET`）
+- 認證檔案（`credentials.json`、`service-account.json`、`*.pem`、`*.key`）
+- 客戶個人資料 PII（身分證、電話、地址、統編）— **違反個資法**
+- SQL dump 含真實資料（`import_data.sql`、`dump.sql`、`backup.sql`）
+- 爬蟲產出（`scripts/output/`、`uploads/`、`parsing_results/`）
+- Cookie/Session 檔（`.config/`、`*.cookie`）
+- 系統檔案（`.DS_Store`、`Thumbs.db`、`.local/`）
+- 建構產物（`dist/`、`node_modules/`、`__pycache__/`）
+
+### 程式碼規則
+- 密碼/金鑰一律用環境變數，不可硬編碼
+- 測試資料用 faker 產生，不可匯出真實客戶資料
+- `.env.example` 值一律用 placeholder（`your_xxx_here`）
+
+### 提交前檢查
+- `git diff --staged` 確認無密碼/金鑰/token
+- 確認無 `.env` 檔、無客戶個資、無 SQL dump、無系統檔案
