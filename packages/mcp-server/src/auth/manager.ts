@@ -99,7 +99,7 @@ async function login(): Promise<string> {
   // Start callback server before opening browser (pass supabase client for PKCE exchange)
   const callbackPromise = startOAuthCallbackServer(supabase);
 
-  const redirectTo = `http://127.0.0.1:${CONFIG.AUTH_PORT}/callback`;
+  const redirectTo = `http://localhost:${CONFIG.AUTH_PORT}/callback`;
 
   // Pin to a specific Google account to prevent cross-account drift
   const queryParams: Record<string, string> = {};
