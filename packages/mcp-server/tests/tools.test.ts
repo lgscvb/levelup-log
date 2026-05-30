@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock auth manager
 vi.mock('../src/auth/manager.js', () => ({
   getValidToken: vi.fn(async () => 'mock-token'),
+  invalidateCachedToken: vi.fn(),
 }));
 
 // Mock config
@@ -155,6 +156,63 @@ describe('MCP Server Tools', () => {
     });
   });
 
+  describe('capture_progress — API integration', () => {
+    it('captures progress with only a summary', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          quest: { id: 'q1', summary: 'Start proposal', status: 'planned' },
+          deltas: { momentum: 1 },
+          momentum_stats: { momentum_score: 1 },
+        }),
+      });
+
+      const { apiPost } = await import('../src/utils/api.js');
+      const result = await apiPost('capture-progress', {
+        summary: 'Start proposal',
+      });
+
+      expect(result.status).toBe(200);
+      expect((result.data as Record<string, unknown>)).toHaveProperty('quest');
+      const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe('https://test.supabase.co/functions/v1/capture-progress');
+    });
+  });
+
+  describe('get_active_quests — API integration', () => {
+    it('fetches active quests with a limit', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ quests: [] }),
+      });
+
+      const { apiGet } = await import('../src/utils/api.js');
+      await apiGet('get-active-quests', { limit: '5' });
+
+      const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const parsed = new URL(url);
+      expect(parsed.searchParams.get('limit')).toBe('5');
+    });
+  });
+
+  describe('get_momentum_stats — API integration', () => {
+    it('fetches momentum stats', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ momentum_score: 12, recovery_score: 4 }),
+      });
+
+      const { apiGet } = await import('../src/utils/api.js');
+      const result = await apiGet('get-momentum-stats');
+
+      expect(result.status).toBe(200);
+      expect(result.data).toHaveProperty('momentum_score', 12);
+    });
+  });
+
   describe('get_recent — API integration', () => {
     it('fetches recent achievements with params', async () => {
       const mockAchievements = [
@@ -253,6 +311,21 @@ describe('MCP Server Tools', () => {
       const parsed = new URL(url);
       expect(parsed.searchParams.get('type')).toBe('all_time');
       expect(parsed.searchParams.get('limit')).toBe('50');
+    });
+
+    it('supports momentum leaderboard type', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ entries: [] }),
+      });
+
+      const { apiGet } = await import('../src/utils/api.js');
+      await apiGet('leaderboard', { type: 'momentum', limit: '10' });
+
+      const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const parsed = new URL(url);
+      expect(parsed.searchParams.get('type')).toBe('momentum');
     });
   });
 });

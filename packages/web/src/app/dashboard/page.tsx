@@ -62,6 +62,24 @@ export default async function DashboardPage() {
       ).data
     : null;
 
+  // Fetch anti-procrastination momentum stats
+  const { data: momentumStats } = await supabase
+    .from("user_momentum_stats")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  // Fetch active quests for read-only reflection
+  const { data: activeQuests } = await supabase
+    .from("quests")
+    .select(
+      "id, quest_type, status, summary, minimum_done_standard, blocker_type, timebox_minutes, quantity_limit, updated_at",
+    )
+    .eq("user_id", user.id)
+    .in("status", ["planned", "started", "rough_done"])
+    .order("updated_at", { ascending: false })
+    .limit(12);
+
   const ageLevel = profile?.birth_date
     ? Math.floor(
         (Date.now() - new Date(profile.birth_date).getTime()) /
@@ -75,6 +93,8 @@ export default async function DashboardPage() {
       achievements={achievements}
       activeTitle={activeTitle}
       ageLevel={ageLevel}
+      momentumStats={momentumStats}
+      activeQuests={activeQuests}
     />
   );
 }

@@ -100,6 +100,19 @@ export default async function ProfilePage({ params }: Props) {
     .select("*", { count: "exact", head: true })
     .eq("user_id", profile.id);
 
+  const { data: momentumStats } = await supabase
+    .from("user_momentum_stats")
+    .select("*")
+    .eq("user_id", profile.id)
+    .maybeSingle();
+
+  const { data: publicQuests } = await supabase
+    .from("public_quest_summaries")
+    .select("id, quest_type, status, public_summary, updated_at")
+    .eq("user_id", profile.id)
+    .order("updated_at", { ascending: false })
+    .limit(8);
+
   const ageLevel = profile.birth_date
     ? Math.floor(
         (Date.now() - new Date(profile.birth_date).getTime()) /
@@ -116,6 +129,8 @@ export default async function ProfilePage({ params }: Props) {
       totalCount={totalCount}
       titlesCount={titlesCount}
       ageLevel={ageLevel}
+      momentumStats={momentumStats}
+      publicQuests={publicQuests}
     />
   );
 }

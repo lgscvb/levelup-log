@@ -27,11 +27,17 @@ const medalColor = (rank: number) => {
 export function LeaderboardClient({ entries, type }: Props) {
   const { locale } = useLocale();
   const tr = t(locale).leaderboard;
+  const zh = locale.startsWith('zh');
+  const isMomentumType = ['momentum', 'initiation', 'completion', 'recovery'].includes(type);
 
   const tabs = [
     { key: 'season', label: tr.season },
     { key: 'month', label: tr.thisYear },
     { key: 'all_time', label: tr.allTime },
+    { key: 'momentum', label: zh ? 'Momentum' : 'Momentum' },
+    { key: 'initiation', label: zh ? '啟動力' : 'Initiation' },
+    { key: 'completion', label: zh ? '收尾力' : 'Completion' },
+    { key: 'recovery', label: zh ? '回復力' : 'Recovery' },
   ];
 
   return (
@@ -39,7 +45,7 @@ export function LeaderboardClient({ entries, type }: Props) {
       <h1 className="mb-6 text-2xl font-bold">{tr.title}</h1>
 
       {/* Type Tabs */}
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         {tabs.map((tab) => (
           <Link
             key={tab.key}
@@ -92,7 +98,9 @@ export function LeaderboardClient({ entries, type }: Props) {
                 <div className="font-bold text-emerald-400">
                   {entry.xp.toLocaleString(locale)}
                 </div>
-                <div className="text-xs text-gray-500">{tr.xp}</div>
+                <div className="text-xs text-gray-500">
+                  {isMomentumType ? (zh ? '分' : 'Score') : tr.xp}
+                </div>
               </div>
             </Link>
           ))}

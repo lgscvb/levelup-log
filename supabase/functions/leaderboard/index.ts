@@ -33,7 +33,47 @@ Deno.serve(async (req) => {
 
     let myRank: number | null = null;
 
-    if (type === 'season') {
+    const momentumFields: Record<string, string> = {
+      momentum: 'momentum_score',
+      initiation: 'initiation_score',
+      completion: 'completion_score',
+      recovery: 'recovery_score',
+    };
+
+    if (momentumFields[type]) {
+      const scoreField = momentumFields[type];
+      const { data: stats } = await supabase
+        .from('user_momentum_stats')
+        .select('user_id, momentum_score, initiation_score, completion_score, recovery_score, profiles(username, display_name, avatar_url)')
+        .order(scoreField, { ascending: false })
+        .limit(limit);
+
+      leaderboard = (stats || []).map((s: any, i) => ({
+        rank: i + 1,
+        username: s.profiles?.username || 'unknown',
+        display_name: s.profiles?.display_name,
+        avatar_url: s.profiles?.avatar_url,
+        xp: s[scoreField] || 0,
+        is_self: s.user_id === user.id,
+      }));
+
+      if (!leaderboard.some(e => e.is_self)) {
+        const { data: myStats } = await supabase
+          .from('user_momentum_stats')
+          .select(scoreField)
+          .eq('user_id', user.id)
+          .single();
+
+        if (myStats) {
+          const { count } = await supabase
+            .from('user_momentum_stats')
+            .select('*', { count: 'exact', head: true })
+            .gt(scoreField, (myStats as any)[scoreField]);
+
+          myRank = (count || 0) + 1;
+        }
+      }
+    } else if (type === 'season') {
       // Get active season leaderboard
       const { data: activeSeason } = await supabase
         .from('seasons')

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "blocklist": [
+    "YourCompanyName",
+    "ClientProjectName"
+  ],
+  "replacements": {
+    "YourCompanyName": "my company",
+    "ClientProjectName": "client project",
+    "SecretProductName": "product"
+  },
+  "patterns": [
+    {
+      "pattern": "\\bTICKET-\\d{3,5}\\b",
+      "replacement": "[ticket]",
+      "description": "Internal ticket IDs"
+    },
+    {
+      "pattern": "\\b\\d{8}\\b",
+      "replacement": "[id-number]",
+      "flags": "g",
+      "description": "8-digit ID numbers (e.g., 統一編號)"
+    }
+  ]
+}

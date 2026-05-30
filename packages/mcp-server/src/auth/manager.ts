@@ -6,6 +6,7 @@ import { log, logError } from "../utils/logger.js";
 
 let cachedAccessToken: string | null = null;
 let tokenExpiresAt: number = 0;
+let tokenRequest: Promise<string> | null = null;
 
 /**
  * Get a valid access token. Will:
@@ -13,16 +14,35 @@ let tokenExpiresAt: number = 0;
  * 2. Try to refresh from stored refresh token
  * 3. Initiate full OAuth login flow if needed
  */
-export async function getValidToken(): Promise<string> {
+export async function getValidToken(options?: {
+  forceRefresh?: boolean;
+}): Promise<string> {
   // Check memory cache
-  if (cachedAccessToken && Date.now() < tokenExpiresAt - 60_000) {
+  if (
+    !options?.forceRefresh &&
+    cachedAccessToken &&
+    Date.now() < tokenExpiresAt - 60_000
+  ) {
     return cachedAccessToken;
   }
 
+  if (tokenRequest) {
+    return tokenRequest;
+  }
+
+  tokenRequest = resolveToken(options);
+  try {
+    return await tokenRequest;
+  } finally {
+    tokenRequest = null;
+  }
+}
+
+async function resolveToken(options?: { forceRefresh?: boolean }): Promise<string> {
   // Try stored tokens
   const stored = loadTokens();
   if (stored) {
-    if (Date.now() < stored.expires_at - 60_000) {
+    if (!options?.forceRefresh && Date.now() < stored.expires_at - 60_000) {
       cachedAccessToken = stored.access_token;
       tokenExpiresAt = stored.expires_at;
       return stored.access_token;
@@ -41,6 +61,11 @@ export async function getValidToken(): Promise<string> {
 
   // Full login required
   return await login();
+}
+
+export function invalidateCachedToken(): void {
+  cachedAccessToken = null;
+  tokenExpiresAt = 0;
 }
 
 async function refreshToken(refreshTokenValue: string): Promise<string | null> {

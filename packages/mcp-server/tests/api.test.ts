@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mock auth manager — getValidToken is called internally by apiGet/apiPost
 vi.mock('../src/auth/manager.js', () => ({
   getValidToken: vi.fn(async () => 'mock-access-token-123'),
+  invalidateCachedToken: vi.fn(),
 }));
 
 // Mock config
@@ -22,7 +23,7 @@ vi.mock('../src/utils/logger.js', () => ({
 }));
 
 import { apiGet, apiPost } from '../src/utils/api.js';
-import { getValidToken } from '../src/auth/manager.js';
+import { getValidToken, invalidateCachedToken } from '../src/auth/manager.js';
 
 // Keep a reference to the original fetch so we can restore it
 const originalFetch = global.fetch;
@@ -97,6 +98,33 @@ describe('apiGet', () => {
     expect(result.data).toBeUndefined();
   });
 
+  it('refreshes the token and retries once on 401', async () => {
+    vi.mocked(getValidToken)
+      .mockResolvedValueOnce('expired-token')
+      .mockResolvedValueOnce('fresh-token');
+
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ total_xp: 100 }),
+      });
+
+    const result = await apiGet('get-stats');
+
+    expect(result.status).toBe(200);
+    expect(result.data).toEqual({ total_xp: 100 });
+    expect(invalidateCachedToken).toHaveBeenCalledOnce();
+    expect(getValidToken).toHaveBeenNthCalledWith(2, { forceRefresh: true });
+    const [, retryOptions] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    expect(retryOptions.headers.Authorization).toBe('Bearer fresh-token');
+  });
+
   it('returns error on network failure', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
@@ -155,6 +183,28 @@ describe('apiPost', () => {
     expect(JSON.parse(options.body)).toEqual(body);
   });
 
+  it('posts minimal progress capture payload', async () => {
+    const responseData = {
+      quest: { id: 'quest-1', summary: 'Write a rough draft', status: 'planned' },
+      deltas: { momentum: 1 },
+    };
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => responseData,
+    });
+
+    const result = await apiPost('capture-progress', {
+      summary: 'Write a rough draft',
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.data).toEqual(responseData);
+    const [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe('https://test.supabase.co/functions/v1/capture-progress');
+    expect(JSON.parse(options.body)).toEqual({ summary: 'Write a rough draft' });
+  });
+
   it('returns error on HTTP error response', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -167,6 +217,34 @@ describe('apiPost', () => {
     expect(result.status).toBe(429);
     expect(result.error).toBe('Rate limited');
     expect(result.data).toBeUndefined();
+  });
+
+  it('retries POST with the same body after refreshing on 401', async () => {
+    vi.mocked(getValidToken)
+      .mockResolvedValueOnce('expired-token')
+      .mockResolvedValueOnce('fresh-token');
+
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'abc', xp: 50 }),
+      });
+
+    const body = { category: 'code', title: 'Test' };
+    const result = await apiPost('record-achievement', body);
+
+    expect(result.status).toBe(200);
+    expect(result.data).toEqual({ id: 'abc', xp: 50 });
+    expect(invalidateCachedToken).toHaveBeenCalledOnce();
+    const [, retryOptions] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    expect(retryOptions.headers.Authorization).toBe('Bearer fresh-token');
+    expect(JSON.parse(retryOptions.body)).toEqual(body);
   });
 
   it('returns error on network failure', async () => {

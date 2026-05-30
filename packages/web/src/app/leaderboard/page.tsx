@@ -54,6 +54,29 @@ export default async function LeaderboardPage({ searchParams }: Props) {
         xp: p.season_xp,
       }));
     }
+  } else if (["momentum", "initiation", "completion", "recovery"].includes(type)) {
+    const metricField: Record<string, string> = {
+      momentum: "momentum_score",
+      initiation: "initiation_score",
+      completion: "completion_score",
+      recovery: "recovery_score",
+    };
+    const scoreField = metricField[type] || "momentum_score";
+    const { data } = await supabase
+      .from("user_momentum_stats")
+      .select(
+        "user_id, momentum_score, initiation_score, completion_score, recovery_score, profiles(username, display_name, avatar_url)",
+      )
+      .order(scoreField, { ascending: false })
+      .limit(50);
+
+    entries = (data || []).map((s: any, i: number) => ({
+      rank: i + 1,
+      username: s.profiles?.username || "unknown",
+      display_name: s.profiles?.display_name,
+      avatar_url: s.profiles?.avatar_url,
+      xp: s[scoreField] || 0,
+    }));
   } else {
     const xpField = type === "month" ? "year_xp" : "total_xp";
     const { data } = await supabase

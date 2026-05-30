@@ -48,6 +48,31 @@ function buildDiaryMd(date: string, content: string): string {
 
 type Complexity = "trivial" | "normal" | "significant" | "major" | "milestone";
 
+const QUEST_EVENT_TYPES = [
+  "intent",
+  "blocked",
+  "started",
+  "rough_done",
+  "anti_started",
+  "anti_stopped",
+  "insight_recorded",
+  "returned",
+  "completed",
+  "abandoned",
+] as const;
+
+const QUEST_TYPES = ["normal", "rough_version", "anti_task"] as const;
+
+const BLOCKER_TYPES = [
+  "perfectionism",
+  "unclear_next_step",
+  "too_large",
+  "fear_of_judgment",
+  "low_energy",
+  "avoidance_loop",
+  "other",
+] as const;
+
 const COMPLEXITY_BASE: Record<Complexity, number> = {
   trivial: 10,
   normal: 30,
@@ -116,9 +141,21 @@ function buildOutputUnitGuide(): string {
 // MCP server-level instructions — injected into system prompt by compliant clients
 // (Claude Desktop, Cursor, Windsurf, Antigravity, etc.) on every session.
 // Install once → works everywhere, no per-project setup needed.
-const SERVER_INSTRUCTIONS = `LevelUp.log Achievement Tracker is active.
+const SERVER_INSTRUCTIONS = `LevelUp.log Achievement and Anti-Procrastination Tracker is active.
 
 PROACTIVELY call record_achievement after any meaningful task — don't wait to be asked.
+
+PROACTIVELY call capture_progress when the user shows task intent, friction, avoidance, starting, rough drafts, returning, or completion.
+
+Capture progress without adding extra operations:
+• If the user says "I want to do X but..." → capture event_type=intent or blocked.
+• If the user starts moving → capture event_type=started.
+• If the user makes a deliberately rough first version → capture event_type=rough_done, quest_type=rough_version.
+• If the user is doomscrolling or avoiding → capture event_type=anti_started, quest_type=anti_task, with a timebox or quantity if stated.
+• If the user stops avoiding, notices the avoidance pattern, or returns to the real task → capture anti_stopped, insight_recorded, or returned.
+• If the user says it is done → capture completed, then record_achievement only when there is a real completed output.
+
+Do not ask for every field. Infer safely, keep summaries abstract, and only ask when the next action cannot be chosen.
 
 Call when:
 • Code written, feature added, bug fixed, refactored
@@ -319,6 +356,193 @@ Keep descriptions abstract — no real names, client names, or source code.`,
     },
   );
 
+  // ─── Tool 2: capture_progress ─────────────────────────────────
+  server.registerTool(
+    "capture_progress",
+    {
+      title: "Capture Anti-Procrastination Progress",
+      description: `Capture task intent, friction, starting, rough drafts, avoidance recovery, and completion from normal LLM conversation.
+
+Use this proactively. The user should not need to open another app, fill a form, or manually click start/complete.
+
+WHEN TO CALL:
+  intent         — user says they want/need to do something
+  blocked        — user is stuck, avoiding, afraid, low energy, or perfectionistic
+  started        — user begins a real task
+  rough_done     — user creates a deliberately rough first version
+  anti_started   — user turns an avoidance behavior into a bounded reverse task
+  anti_stopped   — user stops the reverse task
+  insight_recorded — user notices why they were avoiding
+  returned       — user returns from avoidance to the real task
+  completed      — user completes the quest's minimum standard
+  abandoned      — user intentionally drops the quest
+
+Only summary is required. Infer other fields when safe. Keep summaries abstract and privacy-safe.`,
+      inputSchema: {
+        summary: z
+          .string()
+          .describe(
+            "Brief abstract summary of what the user intends, started, avoided, returned to, or completed.",
+          ),
+        event_type: z
+          .enum(QUEST_EVENT_TYPES)
+          .optional()
+          .describe("Progress event. Defaults to intent on the server."),
+        quest_type: z
+          .enum(QUEST_TYPES)
+          .optional()
+          .describe(
+            "Quest type. Use rough_version for deliberately bad first drafts; anti_task for bounded avoidance.",
+          ),
+        minimum_done_standard: z
+          .string()
+          .optional()
+          .describe(
+            "Smallest meaningful done standard. Infer it when possible instead of asking.",
+          ),
+        blocker_type: z
+          .enum(BLOCKER_TYPES)
+          .optional()
+          .describe("Why the user appears stuck or avoiding."),
+        timebox_minutes: z
+          .number()
+          .min(1)
+          .max(1440)
+          .optional()
+          .describe("Timebox for the task or reverse task, if stated."),
+        quantity_limit: z
+          .number()
+          .min(1)
+          .max(10000)
+          .optional()
+          .describe("Quantity limit for reverse tasks, if stated."),
+        related_quest_id: z
+          .string()
+          .optional()
+          .describe(
+            "Existing quest id when known. If omitted, the server continues the most recent active quest when appropriate.",
+          ),
+        public_summary: z
+          .string()
+          .optional()
+          .describe(
+            "Privacy-safe public summary. Omit to let the server use a generic safe summary.",
+          ),
+        is_public: z
+          .boolean()
+          .optional()
+          .describe(
+            "Whether a safe public summary can appear on the public profile. Defaults to true.",
+          ),
+      },
+    },
+    async ({
+      summary,
+      event_type,
+      quest_type,
+      minimum_done_standard,
+      blocker_type,
+      timebox_minutes,
+      quantity_limit,
+      related_quest_id,
+      public_summary,
+      is_public,
+    }) => {
+      const result = await apiPost("capture-progress", {
+        summary,
+        event_type,
+        quest_type,
+        minimum_done_standard,
+        blocker_type,
+        timebox_minutes,
+        quantity_limit,
+        related_quest_id,
+        public_summary,
+        is_public,
+        source_platform: "claude-code",
+      });
+
+      if (result.error) {
+        return {
+          content: [{ type: "text", text: `Failed to capture progress: ${result.error}` }],
+          isError: true,
+        };
+      }
+
+      const data = result.data as Record<string, unknown>;
+      const quest = data.quest as Record<string, unknown> | undefined;
+      const deltas = data.deltas as Record<string, number> | undefined;
+      const stats = data.momentum_stats as Record<string, unknown> | undefined;
+
+      log("capture_progress", {
+        event_type: event_type ?? "intent",
+        quest_id: quest?.id,
+        momentum: deltas?.momentum,
+      });
+
+      const lines = [
+        "Progress captured.",
+        quest ? `Quest: ${quest.summary} [${quest.status}]` : "",
+        deltas?.momentum ? `Momentum +${deltas.momentum}` : "",
+        stats ? `Total Momentum: ${stats.momentum_score}` : "",
+      ].filter(Boolean);
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+      };
+    },
+  );
+
+  // ─── Tool 3: get_active_quests ────────────────────────────────
+  server.registerTool(
+    "get_active_quests",
+    {
+      title: "Get Active Quests",
+      description:
+        "Get the user's active anti-procrastination quests so the LLM can continue without asking the user to manage state.",
+      inputSchema: {
+        limit: z.number().min(1).max(50).optional().default(10),
+      },
+    },
+    async ({ limit }) => {
+      const result = await apiGet("get-active-quests", { limit: String(limit) });
+      if (result.error) {
+        return {
+          content: [{ type: "text", text: `Error: ${result.error}` }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
+      };
+    },
+  );
+
+  // ─── Tool 4: get_momentum_stats ───────────────────────────────
+  server.registerTool(
+    "get_momentum_stats",
+    {
+      title: "Get Momentum Stats",
+      description:
+        "Get anti-procrastination momentum, initiation, completion, recovery, and focus stats.",
+      inputSchema: {},
+    },
+    async () => {
+      const result = await apiGet("get-momentum-stats");
+      if (result.error) {
+        return {
+          content: [{ type: "text", text: `Error: ${result.error}` }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
+      };
+    },
+  );
+
   // ─── Tool 2: get_my_stats ─────────────────────────────────────
   server.registerTool(
     "get_my_stats",
@@ -410,7 +634,15 @@ Keep descriptions abstract — no real names, client names, or source code.`,
         "View the leaderboard. Shows top users by XP for the current season, month, or all time. Always includes the current user's rank.",
       inputSchema: {
         type: z
-          .enum(["season", "month", "all_time"])
+          .enum([
+            "season",
+            "month",
+            "all_time",
+            "momentum",
+            "initiation",
+            "completion",
+            "recovery",
+          ])
           .optional()
           .default("season"),
         limit: z.number().min(1).max(50).optional().default(10),
@@ -671,10 +903,17 @@ HOW TO DRAFT (do this before calling the tool):
           role: "user",
           content: {
             type: "text",
-            text: `You have the LevelUp.log MCP installed. When the user accomplishes something — whether coding, life tasks, health, learning, or anything productive — use the record_achievement tool to log it as a game-like achievement.
+            text: `You have the LevelUp.log MCP installed. Use it as an LLM-native anti-procrastination layer, not as another app the user must manage.
+
+When the user expresses intent, friction, avoidance, starting, rough drafts, returning, or completion, use capture_progress proactively. The user should not need to open a dashboard, fill a form, or manually click start/complete.
+
+When the user accomplishes something — whether coding, life tasks, health, learning, or anything productive — use record_achievement to log it as a game-like achievement.
 
 Guidelines:
 - Use gamified language: "You defeated a bug!", "Quest complete!", "New skill unlocked!"
+- Treat rough first versions as progress. If the user makes a deliberately bad first draft, capture rough_done with quest_type=rough_version.
+- Treat bounded avoidance as a reverse task. If the user stops avoiding, records an insight, or returns to the real task, capture that recovery. Do not reward pure avoidance as completion.
+- Infer safe defaults. Ask only when the next action or completion standard is truly unclear.
 - On birthdays, celebrate the level-up: "Congrats on reaching Lv.XX! Last year at Lv.XX-1, you completed YYY achievements!"
 - When streaks are about to break, gently remind them
 - When the user expresses fatigue or frustration, don't give generic positivity. Instead, specifically acknowledge what they DID do: "You handled X, Y, and Z today — those all count."
